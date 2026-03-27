@@ -1,0 +1,403 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mfscbo.plot &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=525cde36"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mfscbo.plot</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mfscbo.plot</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mfscbo.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">COLORS</span><span class="p">,</span> <span class="n">MARKERS</span><span class="p">,</span> <span class="n">ensure_list</span>
+
+
+<div class="viewcode-block" id="get_alphas"><a class="viewcode-back" href="../../mfscbo/plot.html#mfscbo.plot.get_alphas">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_alphas</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get alpha values for plotting based on the number of fidelities.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        num_fidelities (int): Number of fidelities.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        list of float: List of alpha values for each fidelity.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">alphas</span> <span class="o">=</span> <span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">num_fidelities</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">alphas</span></div>
+
+<div class="viewcode-block" id="plot_rhos"><a class="viewcode-back" href="../../mfscbo/plot.html#mfscbo.plot.plot_rhos">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">plot_rhos</span><span class="p">(</span><span class="n">rhos</span><span class="p">,</span> 
+              <span class="n">xvalues</span><span class="p">,</span> 
+              <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+              <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">markers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">colors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">alphas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">linewidth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">markersize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+              <span class="n">markevery</span><span class="o">=</span><span class="kc">None</span>
+              <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot the evolution of the rho parameters over iterations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        rhos (List[List[float]]): List containing the rho values for each fidelity at each iteration.</span>
+<span class="sd">        xvalues (List[float]): List of x values.</span>
+<span class="sd">        ax (matplotlib.axes.Axes, optional): Axes object to plot on. If None, a new figure and axes are created.</span>
+<span class="sd">        path (str, optional): Path to save the plot. If None, the plot is not saved.</span>
+<span class="sd">        labels (list or str, optional): List of labels for each fidelity. If None, default labels are used.</span>
+<span class="sd">        markers (list or str, optional): List of markers for each fidelity. If None, default markers are used.</span>
+<span class="sd">        colors (list or str, optional): List of colors for each fidelity. If None, default colors are used.</span>
+<span class="sd">        alphas (list or float, optional): List of alpha values for each fidelity. If None, default alphas are used.</span>
+<span class="sd">        linewidth (list or float, optional): List of linewidths for each fidelity. If None, default linewidths are used.</span>
+<span class="sd">        markersize (list or float, optional): List of markersizes for each fidelity. If None, default markersizes are used.</span>
+<span class="sd">        markevery (list or float, optional): List of markevery values for each fidelity. If None, default markevery values are used.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        matplotlib.axes.Axes: The axes object with the plot.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+       
+    <span class="n">num_fidelities</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">rhos</span><span class="p">)</span><span class="c1">#do not consider fidelity 0</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;s=</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">)],</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">markers</span><span class="p">,</span> <span class="p">[</span><span class="n">MARKERS</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">)],</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">colors</span><span class="p">,</span> <span class="p">[</span><span class="n">COLORS</span><span class="p">[</span><span class="mi">3</span><span class="p">]]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">alphas</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">alphas</span><span class="p">,</span> <span class="n">get_alphas</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">),</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">linewidth</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">linewidth</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">markersize</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">markersize</span><span class="p">,</span> <span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">markevery</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">markevery</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.2</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvalues</span><span class="p">,</span> <span class="n">rhos</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">marker</span><span class="o">=</span><span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;s=</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alphas</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">linewidth</span><span class="o">=</span><span class="n">linewidth</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">markersize</span><span class="o">=</span><span class="n">markersize</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">markevery</span><span class="o">=</span><span class="n">markevery</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">is_new_figure</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\rho$&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;Evolution of $\rho$&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">ax</span></div>
+
+<div class="viewcode-block" id="plot_noises"><a class="viewcode-back" href="../../mfscbo/plot.html#mfscbo.plot.plot_noises">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">plot_noises</span><span class="p">(</span><span class="n">noises</span><span class="p">,</span> 
+                <span class="n">xvalues</span><span class="p">,</span> 
+                <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">markers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">colors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">alphas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">linewidth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">markersize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">markevery</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot the evolution of the noise parameters over iterations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        noises (List[List[float]]): List containing the noise values for each fidelity at each iteration.</span>
+<span class="sd">        xvalues (List[float]): List of x values.</span>
+<span class="sd">        ax (matplotlib.axes.Axes, optional): Axes object to plot on. If None, a new figure and axes are created.</span>
+<span class="sd">        path (str, optional): Path to save the plot. If None, the plot is not saved.</span>
+<span class="sd">        labels (list or str, optional): List of labels for each fidelity. If None, default labels are used.</span>
+<span class="sd">        markers (list or str, optional): List of markers for each fidelity. If None, default markers are used.</span>
+<span class="sd">        colors (list or str, optional): List of colors for each fidelity. If None, default colors are used.</span>
+<span class="sd">        alphas (list or float, optional): List of alpha values for each fidelity. If None, default alphas are used.</span>
+<span class="sd">        linewidth (list or float, optional): List of linewidths for each fidelity. If None, default linewidths are used.</span>
+<span class="sd">        markersize (list or float, optional): List of markersizes for each fidelity. If None, default markersizes are used.</span>
+<span class="sd">        markevery (list or float, optional): List of markevery values for each fidelity. If None, default markevery values are used.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        matplotlib.axes.Axes: The axes object with the plot.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+    <span class="n">num_fidelities</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">noises</span><span class="p">)</span> <span class="c1">#consider fidelity 0</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;s=</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">)],</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">markers</span><span class="p">,</span> <span class="p">[</span><span class="n">MARKERS</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">)],</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">colors</span><span class="p">,</span> <span class="p">[</span><span class="n">COLORS</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">alphas</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">alphas</span><span class="p">,</span> <span class="n">get_alphas</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">),</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">linewidth</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">linewidth</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">markersize</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">markersize</span><span class="p">,</span> <span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">markevery</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">markevery</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.2</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvalues</span><span class="p">,</span> <span class="n">noises</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">marker</span><span class="o">=</span><span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alphas</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">linewidth</span><span class="o">=</span><span class="n">linewidth</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">markersize</span><span class="o">=</span><span class="n">markersize</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">markevery</span><span class="o">=</span><span class="n">markevery</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">is_new_figure</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\varepsilon$&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;Evolution of $\varepsilon$&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>    
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ax</span></div>
+
+<div class="viewcode-block" id="plot_bestYs"><a class="viewcode-back" href="../../mfscbo/plot.html#mfscbo.plot.plot_bestYs">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">plot_bestYs</span><span class="p">(</span><span class="n">bestYs</span><span class="p">,</span> 
+                <span class="n">xvalues</span><span class="p">,</span> 
+                <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">label</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">marker</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">alpha</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">linewidth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">markersize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">markevery</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot the evolution of the best objective values over iterations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bestYs (List[float]): List containing the best objective values at each iteration.</span>
+<span class="sd">        xvalues (List[float]): List of x values.</span>
+<span class="sd">        ax (matplotlib.axes.Axes, optional): Axes object to plot on. If None, a new figure and axes are created.</span>
+<span class="sd">        path (str, optional): Path to save the plot. If None, the plot is not saved.</span>
+<span class="sd">        label (str, optional): Label for the plot. If None, a default label is used.</span>
+<span class="sd">        marker (str, optional): Marker style for the plot. If None, a default marker is used.</span>
+<span class="sd">        color (str, optional): Color for the plot. If None, a default color is used.</span>
+<span class="sd">        alpha (float, optional): Alpha value for the plot. If None, a default alpha is used.</span>
+<span class="sd">        linewidth (float, optional): Linewidth for the plot. If None, a default linewidth is used.</span>
+<span class="sd">        markersize (float, optional): Markersize for the plot. If None, a default markersize is used.</span>
+<span class="sd">        markevery (float, optional): Markevery value for the plot. If None, a default markevery value is used.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        matplotlib.axes.Axes: The axes object with the plot.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">color</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="n">COLORS</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">linewidth</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">linewidth</span> <span class="o">=</span> <span class="mi">2</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvalues</span><span class="p">,</span> <span class="n">bestYs</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="n">linewidth</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="n">marker</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="n">markersize</span><span class="p">,</span> <span class="n">markevery</span><span class="o">=</span><span class="n">markevery</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">is_new_figure</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Evolution of Best Objective Value&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ax</span></div>
+
+<div class="viewcode-block" id="plot_nbiters"><a class="viewcode-back" href="../../mfscbo/plot.html#mfscbo.plot.plot_nbiters">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">plot_nbiters</span><span class="p">(</span><span class="n">nbiters</span><span class="p">,</span> 
+                 <span class="n">xvalues</span><span class="p">,</span> 
+                 <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                 <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">markers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">colors</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">alphas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">linewidth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">markersize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">markevery</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot the number of iterations at each fidelity over total cost.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        nbiters (List[List[int]]): List containing the number of iterations for each fidelity at each total cost.</span>
+<span class="sd">        xvalues (List[float]): List of x values (total costs).</span>
+<span class="sd">        ax (matplotlib.axes.Axes, optional): Axes object to plot on. If None, a new figure and axes are created.</span>
+<span class="sd">        path (str, optional): Path to save the plot. If None, the plot is not saved.</span>
+<span class="sd">        labels (list or str, optional): List of labels for each fidelity. If None, default labels are used.</span>
+<span class="sd">        markers (list or str, optional): List of markers for each fidelity. If None, default markers are used.</span>
+<span class="sd">        colors (list or str, optional): List of colors for each fidelity. If None, default colors are used.</span>
+<span class="sd">        alphas (list or float, optional): List of alpha values for each fidelity. If None, default alphas are used.</span>
+<span class="sd">        linewidth (list or float, optional): List of linewidths for each fidelity. If None, default linewidths are used.</span>
+<span class="sd">        markersize (list or float, optional): List of markersizes for each fidelity. If None, default markersizes are used.</span>
+<span class="sd">        markevery (list or float, optional): List of markevery values for each fidelity. If None, default markevery values are used.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        matplotlib.axes.Axes: The axes object with the plot.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+    <span class="n">num_fidelities</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nbiters</span><span class="p">)</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;s=</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">)],</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">markers</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">markers</span><span class="p">,</span> <span class="p">[</span><span class="n">MARKERS</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">)],</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">colors</span><span class="p">,</span> <span class="p">[</span><span class="n">COLORS</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">alphas</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">alphas</span><span class="p">,</span> <span class="n">get_alphas</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">),</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">linewidth</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">linewidth</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">markersize</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">markersize</span><span class="p">,</span> <span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+    <span class="n">markevery</span> <span class="o">=</span> <span class="n">ensure_list</span><span class="p">(</span><span class="n">markevery</span><span class="p">,</span> <span class="p">[</span><span class="mf">0.2</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_fidelities</span><span class="p">):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvalues</span><span class="p">,</span> <span class="n">nbiters</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">marker</span><span class="o">=</span><span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alphas</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">linewidth</span><span class="o">=</span><span class="n">linewidth</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">markersize</span><span class="o">=</span><span class="n">markersize</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">markevery</span><span class="o">=</span><span class="n">markevery</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">is_new_figure</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Number of Iterations per Fidelity&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ax</span></div>
+
+
+<div class="viewcode-block" id="plot_tr_lengths"><a class="viewcode-back" href="../../mfscbo/plot.html#mfscbo.plot.plot_tr_lengths">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">plot_tr_lengths</span><span class="p">(</span><span class="n">tr_lengths</span><span class="p">,</span> 
+                   <span class="n">xvalues</span><span class="p">,</span> 
+                   <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                   <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">label</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">marker</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">alpha</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">linewidth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">markersize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">markevery</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot the evolution of the trust-region lengths over iterations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tr_lengths (List[float]): List containing the trust-region lengths at each iteration.</span>
+<span class="sd">        xvalues (List[float]): List of x values.</span>
+<span class="sd">        ax (matplotlib.axes.Axes, optional): Axes object to plot on. If None, a new figure and axes are created.</span>
+<span class="sd">        path (str, optional): Path to save the plot. If None, the plot is not saved.</span>
+<span class="sd">        label (str, optional): Label for the plot. If None, a default label is used.</span>
+<span class="sd">        marker (str, optional): Marker style for the plot. If None, a default marker is used.</span>
+<span class="sd">        color (str, optional): Color for the plot. If None, a default color is used.</span>
+<span class="sd">        alpha (float, optional): Alpha value for the plot. If None, a default alpha is used.</span>
+<span class="sd">        linewidth (float, optional): Linewidth for the plot. If None, a default linewidth is used.</span>
+<span class="sd">        markersize (float, optional): Markersize for the plot. If None, a default markersize is used.</span>
+<span class="sd">        markevery (float, optional): Markevery value for the plot. If None, a default markevery value is used.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        matplotlib.axes.Axes: The axes object with the plot.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">ax</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">is_new_figure</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">color</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="s2">&quot;k&quot;</span>
+    <span class="k">if</span> <span class="n">linewidth</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">linewidth</span> <span class="o">=</span> <span class="mi">2</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">xvalues</span><span class="p">,</span> <span class="n">tr_lengths</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="n">linewidth</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="n">marker</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="n">markersize</span><span class="p">,</span> <span class="n">markevery</span><span class="o">=</span><span class="n">markevery</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">is_new_figure</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Evolution of Trust-Region Lengths&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ax</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Lucas Palazzolo.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

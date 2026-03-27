@@ -1,0 +1,297 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mfscbo_optimization module &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=525cde36"></script>
+      <script src="../_static/doctools.js?v=888ff710"></script>
+      <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="scbo_state module" href="scbo_state.html" />
+    <link rel="prev" title="mfgp module" href="mfgp.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../mfscbo.html#mf-scbo-modules">MF-SCBO Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="mfgp.html">mfgp module</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">mfscbo_optimization module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfscbo_optimization.out_and_in"><code class="docutils literal notranslate"><span class="pre">out_and_in()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfscbo_optimization.get_initial_points_mf"><code class="docutils literal notranslate"><span class="pre">get_initial_points_mf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfscbo_optimization.fidelity_selection"><code class="docutils literal notranslate"><span class="pre">fidelity_selection()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfscbo_optimization.generate_batch_mf"><code class="docutils literal notranslate"><span class="pre">generate_batch_mf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfscbo_optimization.ScboMfOptimizer"><code class="docutils literal notranslate"><span class="pre">ScboMfOptimizer</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="scbo_state.html">scbo_state module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="utils.html">utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="plot.html">plot module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="functions.html">functions module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a></li>
+      <li class="breadcrumb-item active">mfscbo_optimization module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/mfscbo/mfscbo_optimization.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-mfscbo.mfscbo_optimization">
+<span id="mfscbo-optimization-module"></span><h1>mfscbo_optimization module<a class="headerlink" href="#module-mfscbo.mfscbo_optimization" title="Permalink to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.mfscbo_optimization.out_and_in">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.mfscbo_optimization.</span></span><span class="sig-name descname"><span class="pre">out_and_in</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_im1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rtol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfscbo_optimization.html#out_and_in"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfscbo_optimization.out_and_in" title="Permalink to this definition"></a></dt>
+<dd><dl class="simple">
+<dt>Separate points X_i into points that are also in X_im1 and points that are not.</dt><dd><p>The comparison is done by using : ||x - y|| &lt;= atol + rtol * ||y|| =&gt; ||x-y||/||y|| &lt;= rtol + atol/||y||</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X_i</strong> (<em>torch.Tensor</em>) – Points to separate of shape (n_i, dim)</p></li>
+<li><p><strong>X_im1</strong> (<em>torch.Tensor</em>) – Reference points of shape (n_im1, dim)</p></li>
+<li><p><strong>rtol</strong> (<em>float</em><em>, </em><em>optional</em>) – Relative tolerance. Defaults to 1e-9.</p></li>
+<li><p><strong>atol</strong> (<em>float</em><em>, </em><em>optional</em>) – Absolute tolerance. Defaults to 1e-8.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(indices out according to X_im1 for i, indices in according to X_im1 for i, indices in according to X_im1 for im1)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple[torch.Tensor, torch.Tensor, torch.Tensor]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.mfscbo_optimization.get_initial_points_mf">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.mfscbo_optimization.</span></span><span class="sig-name descname"><span class="pre">get_initial_points_mf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torchargs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfscbo_optimization.html#get_initial_points_mf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfscbo_optimization.get_initial_points_mf" title="Permalink to this definition"></a></dt>
+<dd><p>Generate initial points for multi-fidelity optimization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dim</strong> (<em>int</em>) – Dimension of the problem.</p></li>
+<li><p><strong>n_pts</strong> (<em>List</em><em>[</em><em>int</em><em>]</em>) – Number of initial points for each fidelity level :n_pts[i] is the number of i-th fidelity points (increasing order).</p></li>
+<li><p><strong>torchargs</strong> (<em>dict</em>) – Dictionary containing the device on which the tensors will be stored
+and the dtype (device : str, dtype : torch.dtype)</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Random seed for reproducibility. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>List of initial points for each fidelity level. The i-th element of the list</dt><dd><p>contains the initial points for the i-th fidelity of shape (n_pts[i], dim+1).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[torch.Tensor]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.mfscbo_optimization.fidelity_selection">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.mfscbo_optimization.</span></span><span class="sig-name descname"><span class="pre">fidelity_selection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Y_next</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">means_next</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_costs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fidelities</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfscbo_optimization.html#fidelity_selection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfscbo_optimization.fidelity_selection" title="Permalink to this definition"></a></dt>
+<dd><p>Select the best fidelity level based on the expected improvement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Y_next</strong> (<em>List</em><em>[</em><em>torch.Tensor</em><em>]</em>) – The predicted values for the next points of shape (batch, nb_fidelities).</p></li>
+<li><p><strong>means_next</strong> (<em>List</em><em>[</em><em>torch.Tensor</em><em>]</em>) – The predicted means for the next points of shape (batch, nb_fidelities).</p></li>
+<li><p><strong>time_costs</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – The time costs for each fidelity level of shape (nb_fidelities,).</p></li>
+<li><p><strong>fidelities</strong> (<em>List</em><em>[</em><em>int</em><em>]</em>) – The list of fidelity levels to consider.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(The selected fidelity level for each point of shape (batch, 1), the corresponding terms for each fidelity level of shape (batch, nb_fidelities)).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(torch.Tensor, torch.Tensor)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.mfscbo_optimization.generate_batch_mf">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.mfscbo_optimization.</span></span><span class="sig-name descname"><span class="pre">generate_batch_mf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type_of_batch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_lf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">models_delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time_costs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_hf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_hf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C_hf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_candidates</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constraint_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sobol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torchargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfscbo_optimization.html#generate_batch_mf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfscbo_optimization.generate_batch_mf" title="Permalink to this definition"></a></dt>
+<dd><p>Generate a batch of points to evaluate by sampling from the multi-fidelity model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>type_of_batch</strong> (<em>str</em>) – Type of batch to generate (shoot of batch_size x n_candidates points then select the best ones : “parallel” or  the batch_size best points from n_candidates points : “sequential”)</p></li>
+<li><p><strong>state</strong> (<a class="reference internal" href="scbo_state.html#mfscbo.scbo_state.ScboState" title="mfscbo.scbo_state.ScboState"><em>ScboState</em></a>) – Current state of the optimization</p></li>
+<li><p><strong>model_lf</strong> (<em>botorch.models.SingleTaskGP</em>) – Fitted low fidelity GP model</p></li>
+<li><p><strong>models_delta</strong> (<em>List</em><em>[</em><em>botorch.models.SingleTaskGP</em><em>]</em>) – Fitted delta GP models</p></li>
+<li><p><strong>rhos</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – Correlation parameter between fidelities</p></li>
+<li><p><strong>time_costs</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – Time costs of the fidelity functions</p></li>
+<li><p><strong>X_hf</strong> (<em>torch.Tensor</em>) – High fidelity points of shape (n_hf_pts, dim)</p></li>
+<li><p><strong>Y_hf</strong> (<em>torch.Tensor</em>) – High fidelity values of shape (n_hf_pts, 1)</p></li>
+<li><p><strong>C_hf</strong> (<em>torch.Tensor</em>) – Constraint values of shape (n_pts, n_constraints)</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em>) – Number of points to sample</p></li>
+<li><p><strong>n_candidates</strong> (<em>int</em>) – Number of candidate points for thomson sampling</p></li>
+<li><p><strong>constraint_model</strong> (<em>botorch.models.ModelListGP</em>) – Fitted constraints GP models</p></li>
+<li><p><strong>sobol</strong> (<em>SobolEngine</em>) – Sobol engine for quasi-random sampling</p></li>
+<li><p><strong>torchargs</strong> (<em>dict</em>) – Dictionary containing the device on which the tensors will be stored
+and the dtype (device : str, dtype : torch.dtype)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(Sampled points of shape (batch_size, dim), criterion for fidelity selection of shape (batch_size, nb_fidelities))</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(torch.Tensor, torch.Tensor)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="mfscbo.mfscbo_optimization.ScboMfOptimizer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">mfscbo.mfscbo_optimization.</span></span><span class="sig-name descname"><span class="pre">ScboMfOptimizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">eval_objectives</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constraints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">costs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_of_batch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type_of_centering</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">torchargs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">restart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfscbo_optimization.html#ScboMfOptimizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfscbo_optimization.ScboMfOptimizer" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="mfscbo.mfscbo_optimization.ScboMfOptimizer.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">added_X</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">added_Y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">added_C</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfscbo_optimization.html#ScboMfOptimizer.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfscbo_optimization.ScboMfOptimizer.initialize" title="Permalink to this definition"></a></dt>
+<dd><p>Initialize the optimization by sampling initial points.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>added_X</strong> (<em>List</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Additional points (normalized).
+Defaults to None.</p></li>
+<li><p><strong>added_Y</strong> (<em>List</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Additional objective values.
+Defaults to None.</p></li>
+<li><p><strong>added_C</strong> (<em>List</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – Additional constraint values.
+Defaults to None.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mfscbo.mfscbo_optimization.ScboMfOptimizer.optimize">
+<span class="sig-name descname"><span class="pre">optimize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_cost</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'constraints':</span> <span class="pre">{'lengthscale_interval':</span> <span class="pre">(0.005,</span> <span class="pre">4.0),</span> <span class="pre">'matern_nu':</span> <span class="pre">2.5,</span> <span class="pre">'noise_interval':</span> <span class="pre">(1e-06,</span> <span class="pre">0.001)},</span> <span class="pre">'is_binary':</span> <span class="pre">False,</span> <span class="pre">'objective':</span> <span class="pre">{'lengthscale_interval':</span> <span class="pre">(0.005,</span> <span class="pre">4.0),</span> <span class="pre">'matern_nu':</span> <span class="pre">2.5,</span> <span class="pre">'noise_interval':</span> <span class="pre">(1e-06,</span> <span class="pre">0.001)}}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'MFSCBO'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfscbo_optimization.html#ScboMfOptimizer.optimize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfscbo_optimization.ScboMfOptimizer.optimize" title="Permalink to this definition"></a></dt>
+<dd><p>Optimize the objective function using MF-SCBO.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>max_cost</strong> (<em>int</em><em>, </em><em>optional</em>) – max cost = n_pts[0]*time_costs[0] + … + n_pts[S]*time_costs[S]. Defaults to 100.</p></li>
+<li><p><strong>batch_size</strong> (<em>int</em><em>, </em><em>optional</em>) – Batch size for the optimization. Defaults to 4.</p></li>
+<li><p><strong>gp_parameters</strong> (<em>dict</em><em>, </em><em>optional</em>) – <p>Dictionary containing the GP hyperparameters. If different parameters for the different constraints,
+the dictionay should be of the form {“objective” : {…}, “constraints” : {0 : {…}, 1 :{…}, …, n_constraints-1 : {…}}}.
+Defaults to {“objective” : {“noise_interval”: (1e-6, 1e-3),</p>
+<blockquote>
+<div><blockquote>
+<div><p>”matern_nu”: 2.5,
+“lengthscale_interval”: (0.005, 4.0)},</p>
+</div></blockquote>
+<dl class="simple">
+<dt>”constraints”<span class="classifier">{“noise_interval”: (1e-6, 1e-3),</span></dt><dd><p>”matern_nu”: 2.5,
+“lengthscale_interval”: (0.005, 4.0)},
+“is_binary”: False}.</p>
+</dd>
+</dl>
+</div></blockquote>
+</p></li>
+<li><p><strong>path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to save the results. Defaults to “MFSCBO”.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, print the optimization progress. Defaults to True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The best X and Y values found during optimization.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(torch.Tensor, torch.Tensor)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="mfgp.html" class="btn btn-neutral float-left" title="mfgp module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="scbo_state.html" class="btn btn-neutral float-right" title="scbo_state module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Lucas Palazzolo.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

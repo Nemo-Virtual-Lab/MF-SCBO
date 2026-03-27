@@ -1,0 +1,291 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>plot module &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=525cde36"></script>
+      <script src="../_static/doctools.js?v=888ff710"></script>
+      <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="functions module" href="functions.html" />
+    <link rel="prev" title="utils module" href="utils.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../mfscbo.html#mf-scbo-modules">MF-SCBO Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="mfgp.html">mfgp module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mfscbo_optimization.html">mfscbo_optimization module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="scbo_state.html">scbo_state module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="utils.html">utils module</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">plot module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.plot.get_alphas"><code class="docutils literal notranslate"><span class="pre">get_alphas()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.plot.plot_rhos"><code class="docutils literal notranslate"><span class="pre">plot_rhos()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.plot.plot_noises"><code class="docutils literal notranslate"><span class="pre">plot_noises()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.plot.plot_bestYs"><code class="docutils literal notranslate"><span class="pre">plot_bestYs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.plot.plot_nbiters"><code class="docutils literal notranslate"><span class="pre">plot_nbiters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.plot.plot_tr_lengths"><code class="docutils literal notranslate"><span class="pre">plot_tr_lengths()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="functions.html">functions module</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a></li>
+      <li class="breadcrumb-item active">plot module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/mfscbo/plot.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-mfscbo.plot">
+<span id="plot-module"></span><h1>plot module<a class="headerlink" href="#module-mfscbo.plot" title="Permalink to this heading"></a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.plot.get_alphas">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.plot.</span></span><span class="sig-name descname"><span class="pre">get_alphas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_fidelities</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/plot.html#get_alphas"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.plot.get_alphas" title="Permalink to this definition"></a></dt>
+<dd><p>Get alpha values for plotting based on the number of fidelities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>num_fidelities</strong> (<em>int</em>) – Number of fidelities.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of alpha values for each fidelity.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.plot.plot_rhos">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.plot.</span></span><span class="sig-name descname"><span class="pre">plot_rhos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xvalues</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alphas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linewidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markersize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markevery</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/plot.html#plot_rhos"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.plot.plot_rhos" title="Permalink to this definition"></a></dt>
+<dd><p>Plot the evolution of the rho parameters over iterations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rhos</strong> (<em>List</em><em>[</em><em>List</em><em>[</em><em>float</em><em>]</em><em>]</em>) – List containing the rho values for each fidelity at each iteration.</p></li>
+<li><p><strong>xvalues</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – List of x values.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axes object to plot on. If None, a new figure and axes are created.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to save the plot. If None, the plot is not saved.</p></li>
+<li><p><strong>labels</strong> (<em>list</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – List of labels for each fidelity. If None, default labels are used.</p></li>
+<li><p><strong>markers</strong> (<em>list</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – List of markers for each fidelity. If None, default markers are used.</p></li>
+<li><p><strong>colors</strong> (<em>list</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – List of colors for each fidelity. If None, default colors are used.</p></li>
+<li><p><strong>alphas</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of alpha values for each fidelity. If None, default alphas are used.</p></li>
+<li><p><strong>linewidth</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of linewidths for each fidelity. If None, default linewidths are used.</p></li>
+<li><p><strong>markersize</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of markersizes for each fidelity. If None, default markersizes are used.</p></li>
+<li><p><strong>markevery</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of markevery values for each fidelity. If None, default markevery values are used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The axes object with the plot.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.axes.Axes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.plot.plot_noises">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.plot.</span></span><span class="sig-name descname"><span class="pre">plot_noises</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">noises</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xvalues</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alphas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linewidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markersize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markevery</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/plot.html#plot_noises"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.plot.plot_noises" title="Permalink to this definition"></a></dt>
+<dd><p>Plot the evolution of the noise parameters over iterations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>noises</strong> (<em>List</em><em>[</em><em>List</em><em>[</em><em>float</em><em>]</em><em>]</em>) – List containing the noise values for each fidelity at each iteration.</p></li>
+<li><p><strong>xvalues</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – List of x values.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axes object to plot on. If None, a new figure and axes are created.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to save the plot. If None, the plot is not saved.</p></li>
+<li><p><strong>labels</strong> (<em>list</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – List of labels for each fidelity. If None, default labels are used.</p></li>
+<li><p><strong>markers</strong> (<em>list</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – List of markers for each fidelity. If None, default markers are used.</p></li>
+<li><p><strong>colors</strong> (<em>list</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – List of colors for each fidelity. If None, default colors are used.</p></li>
+<li><p><strong>alphas</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of alpha values for each fidelity. If None, default alphas are used.</p></li>
+<li><p><strong>linewidth</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of linewidths for each fidelity. If None, default linewidths are used.</p></li>
+<li><p><strong>markersize</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of markersizes for each fidelity. If None, default markersizes are used.</p></li>
+<li><p><strong>markevery</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of markevery values for each fidelity. If None, default markevery values are used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The axes object with the plot.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.axes.Axes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.plot.plot_bestYs">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.plot.</span></span><span class="sig-name descname"><span class="pre">plot_bestYs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bestYs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xvalues</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marker</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linewidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markersize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markevery</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/plot.html#plot_bestYs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.plot.plot_bestYs" title="Permalink to this definition"></a></dt>
+<dd><p>Plot the evolution of the best objective values over iterations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bestYs</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – List containing the best objective values at each iteration.</p></li>
+<li><p><strong>xvalues</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – List of x values.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axes object to plot on. If None, a new figure and axes are created.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to save the plot. If None, the plot is not saved.</p></li>
+<li><p><strong>label</strong> (<em>str</em><em>, </em><em>optional</em>) – Label for the plot. If None, a default label is used.</p></li>
+<li><p><strong>marker</strong> (<em>str</em><em>, </em><em>optional</em>) – Marker style for the plot. If None, a default marker is used.</p></li>
+<li><p><strong>color</strong> (<em>str</em><em>, </em><em>optional</em>) – Color for the plot. If None, a default color is used.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) – Alpha value for the plot. If None, a default alpha is used.</p></li>
+<li><p><strong>linewidth</strong> (<em>float</em><em>, </em><em>optional</em>) – Linewidth for the plot. If None, a default linewidth is used.</p></li>
+<li><p><strong>markersize</strong> (<em>float</em><em>, </em><em>optional</em>) – Markersize for the plot. If None, a default markersize is used.</p></li>
+<li><p><strong>markevery</strong> (<em>float</em><em>, </em><em>optional</em>) – Markevery value for the plot. If None, a default markevery value is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The axes object with the plot.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.axes.Axes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.plot.plot_nbiters">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.plot.</span></span><span class="sig-name descname"><span class="pre">plot_nbiters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nbiters</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xvalues</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alphas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linewidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markersize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markevery</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/plot.html#plot_nbiters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.plot.plot_nbiters" title="Permalink to this definition"></a></dt>
+<dd><p>Plot the number of iterations at each fidelity over total cost.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nbiters</strong> (<em>List</em><em>[</em><em>List</em><em>[</em><em>int</em><em>]</em><em>]</em>) – List containing the number of iterations for each fidelity at each total cost.</p></li>
+<li><p><strong>xvalues</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – List of x values (total costs).</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axes object to plot on. If None, a new figure and axes are created.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to save the plot. If None, the plot is not saved.</p></li>
+<li><p><strong>labels</strong> (<em>list</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – List of labels for each fidelity. If None, default labels are used.</p></li>
+<li><p><strong>markers</strong> (<em>list</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – List of markers for each fidelity. If None, default markers are used.</p></li>
+<li><p><strong>colors</strong> (<em>list</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – List of colors for each fidelity. If None, default colors are used.</p></li>
+<li><p><strong>alphas</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of alpha values for each fidelity. If None, default alphas are used.</p></li>
+<li><p><strong>linewidth</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of linewidths for each fidelity. If None, default linewidths are used.</p></li>
+<li><p><strong>markersize</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of markersizes for each fidelity. If None, default markersizes are used.</p></li>
+<li><p><strong>markevery</strong> (<em>list</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – List of markevery values for each fidelity. If None, default markevery values are used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The axes object with the plot.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.axes.Axes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.plot.plot_tr_lengths">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.plot.</span></span><span class="sig-name descname"><span class="pre">plot_tr_lengths</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tr_lengths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xvalues</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marker</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linewidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markersize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markevery</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/plot.html#plot_tr_lengths"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.plot.plot_tr_lengths" title="Permalink to this definition"></a></dt>
+<dd><p>Plot the evolution of the trust-region lengths over iterations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tr_lengths</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – List containing the trust-region lengths at each iteration.</p></li>
+<li><p><strong>xvalues</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – List of x values.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axes object to plot on. If None, a new figure and axes are created.</p></li>
+<li><p><strong>path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to save the plot. If None, the plot is not saved.</p></li>
+<li><p><strong>label</strong> (<em>str</em><em>, </em><em>optional</em>) – Label for the plot. If None, a default label is used.</p></li>
+<li><p><strong>marker</strong> (<em>str</em><em>, </em><em>optional</em>) – Marker style for the plot. If None, a default marker is used.</p></li>
+<li><p><strong>color</strong> (<em>str</em><em>, </em><em>optional</em>) – Color for the plot. If None, a default color is used.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) – Alpha value for the plot. If None, a default alpha is used.</p></li>
+<li><p><strong>linewidth</strong> (<em>float</em><em>, </em><em>optional</em>) – Linewidth for the plot. If None, a default linewidth is used.</p></li>
+<li><p><strong>markersize</strong> (<em>float</em><em>, </em><em>optional</em>) – Markersize for the plot. If None, a default markersize is used.</p></li>
+<li><p><strong>markevery</strong> (<em>float</em><em>, </em><em>optional</em>) – Markevery value for the plot. If None, a default markevery value is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The axes object with the plot.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.axes.Axes</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="utils.html" class="btn btn-neutral float-left" title="utils module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="functions.html" class="btn btn-neutral float-right" title="functions module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Lucas Palazzolo.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

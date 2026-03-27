@@ -1,0 +1,1195 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mfscbo.mfscbo_optimization &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=525cde36"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mfscbo.mfscbo_optimization</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mfscbo.mfscbo_optimization</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">gc</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.quasirandom</span><span class="w"> </span><span class="kn">import</span> <span class="n">SobolEngine</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">gpytorch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">botorch.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelListGP</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">botorch.utils.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">unnormalize</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mfscbo.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Print_log_and_console</span><span class="p">,</span> <span class="n">get_gp_info</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mfscbo.mfgp</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeltaGPModel</span><span class="p">,</span> <span class="n">mean_of_fidelity_i</span><span class="p">,</span> <span class="n">samples_of_fidelity_i</span><span class="p">,</span> <span class="n">get_fitted_model</span><span class="p">,</span> <span class="n">fit_model_delta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mfscbo.scbo_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScboState</span><span class="p">,</span> <span class="n">update_state</span><span class="p">,</span> <span class="n">get_best_index_for_batch</span>
+
+
+
+<span class="c1">## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+<span class="c1"># Original code from BoTorch : https://botorch.org/docs/tutorials/scalable_constrained_bo/</span>
+<span class="c1"># Some modifications have been made to adapt the code to  our needs.</span>
+<span class="c1">## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Multi-fidelity Bayesian Optimization </span>
+<span class="sd">===========================================================================</span>
+
+<span class="sd">Denote by 0 the low fidelity and S the high fidelity (so S+1 fidelities in total).</span>
+<span class="sd">Model: f_1(x) = rho_1 * f_0(x) + delta_1(x),</span>
+<span class="sd">       f_i(x) = rho_i * f_{i-1}(x) + delta_i(x)</span>
+<span class="sd">       f_S(x) = rho_S * f_{S-1}(x) + delta_S(x)</span>
+<span class="sd"> where</span>
+<span class="sd">- f_i ~ GP(m_i, k_i)</span>
+<span class="sd">- delta_i ~ GP(m_d_i, k_d_i)</span>
+<span class="sd">Assume independence between GPs.</span>
+
+<span class="sd">rho = [rho_0, rho_1, ..., rho_S] with rho_0 = 1</span>
+<span class="sd">delta = [delta_0, delta_1, delta_2, ..., delta_S] with delta_0 = None</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="out_and_in"><a class="viewcode-back" href="../../mfscbo/mfscbo_optimization.html#mfscbo.mfscbo_optimization.out_and_in">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">out_and_in</span><span class="p">(</span><span class="n">X_i</span><span class="p">,</span> <span class="n">X_im1</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Separate points X_i into points that are also in X_im1 and points that are not.</span>
+<span class="sd">       The comparison is done by using : ||x - y|| &lt;= atol + rtol * ||y|| =&gt; ||x-y||/||y|| &lt;= rtol + atol/||y||</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        X_i (torch.Tensor): Points to separate of shape (n_i, dim)</span>
+<span class="sd">        X_im1 (torch.Tensor): Reference points of shape (n_im1, dim)</span>
+<span class="sd">        rtol (float, optional): Relative tolerance. Defaults to 1e-9.</span>
+<span class="sd">        atol (float, optional): Absolute tolerance. Defaults to 1e-8.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: (indices out according to X_im1 for i, indices in according to X_im1 for i, indices in according to X_im1 for im1)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">X_i</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">X_im1</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># shape : (n_i, n_im1, dim) = (n_i, 1, dim) - (1, n_im1, dim)</span>
+    <span class="n">dist</span> <span class="o">=</span> <span class="n">diff</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>                      <span class="c1">#shape : (n_i, n_im1)</span>
+
+    <span class="n">ref_norm</span> <span class="o">=</span> <span class="n">X_im1</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>    <span class="c1">#shape : (1, n_im1)</span>
+    <span class="n">tol</span> <span class="o">=</span> <span class="n">atol</span> <span class="o">+</span> <span class="n">rtol</span> <span class="o">*</span> <span class="n">ref_norm</span>
+
+    <span class="c1"># Don&#39;t do in_mask_fid_i = in_mask.any(dim=1)  because multiple points can be close</span>
+    <span class="n">min_idx</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1">#shape : (n_im1)</span>
+    <span class="n">mask_of_dist</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>  <span class="c1">#shape : (n_i, n_im1)</span>
+    <span class="n">mask_of_dist</span><span class="p">[</span><span class="n">min_idx</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">dist_unique</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">))</span>  <span class="c1">#shape : (n_i, n_im1)</span>
+    <span class="n">dist_unique</span><span class="p">[</span><span class="n">mask_of_dist</span><span class="p">]</span> <span class="o">=</span> <span class="n">dist</span><span class="p">[</span><span class="n">mask_of_dist</span><span class="p">]</span>
+    <span class="n">in_mask_fid_i</span> <span class="o">=</span> <span class="p">(</span><span class="n">dist_unique</span> <span class="o">&lt;=</span> <span class="n">tol</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1">#shape : (n_i)</span>
+
+    <span class="c1"># Don&#39;t do in_mask_fid_im1 = in_mask.any(dim=0)  because multiple points can be close</span>
+    <span class="n">min_idx</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1">#shape : (n_i)</span>
+    <span class="n">mask_of_dist</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>  <span class="c1">#shape : (n_i, n_im1)</span>
+    <span class="n">mask_of_dist</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">min_idx</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">dist_unique</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">))</span>  <span class="c1">#shape : (n_i, n_im1)</span>
+    <span class="n">dist_unique</span><span class="p">[</span><span class="n">mask_of_dist</span><span class="p">]</span> <span class="o">=</span> <span class="n">dist</span><span class="p">[</span><span class="n">mask_of_dist</span><span class="p">]</span>
+    <span class="n">in_mask_fid_im1</span> <span class="o">=</span> <span class="p">(</span><span class="n">dist_unique</span> <span class="o">&lt;=</span> <span class="n">tol</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1">#shape : (n_im1)</span>
+
+    <span class="k">return</span> <span class="o">~</span><span class="n">in_mask_fid_i</span><span class="p">,</span> <span class="n">in_mask_fid_i</span><span class="p">,</span> <span class="n">in_mask_fid_im1</span></div>
+
+<div class="viewcode-block" id="get_initial_points_mf"><a class="viewcode-back" href="../../mfscbo/mfscbo_optimization.html#mfscbo.mfscbo_optimization.get_initial_points_mf">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_initial_points_mf</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">,</span> <span class="n">torchargs</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Generate initial points for multi-fidelity optimization.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dim (int): Dimension of the problem.</span>
+<span class="sd">        n_pts (List[int]): Number of initial points for each fidelity level :n_pts[i] is the number of i-th fidelity points (increasing order).</span>
+<span class="sd">        torchargs (dict): Dictionary containing the device on which the tensors will be stored</span>
+<span class="sd">                            and the dtype (device : str, dtype : torch.dtype)</span>
+<span class="sd">        seed (int, optional): Random seed for reproducibility. Defaults to None.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List[torch.Tensor]: List of initial points for each fidelity level. The i-th element of the list</span>
+<span class="sd">                            contains the initial points for the i-th fidelity of shape (n_pts[i], dim+1).</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nb_fidelities</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_pts</span><span class="p">)</span>
+    <span class="n">fidelities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nb_fidelities</span><span class="p">)</span>
+
+    <span class="c1">#X_init in nb_fidelities parts</span>
+    <span class="n">X_init</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">n_pts</span><span class="p">:</span>
+        <span class="n">sobol</span> <span class="o">=</span> <span class="n">SobolEngine</span><span class="p">(</span><span class="n">dim</span><span class="p">,</span> <span class="n">scramble</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+        <span class="n">X_init</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sobol</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="o">**</span><span class="n">torchargs</span><span class="p">))</span>
+
+    <span class="c1">#add a last column</span>
+    <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="n">fidelities</span> <span class="p">:</span>
+        <span class="n">X_init</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">X_init</span><span class="p">[</span><span class="n">fid</span><span class="p">],</span> <span class="n">fid</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">n_pts</span><span class="p">[</span><span class="n">fid</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">torchargs</span><span class="p">)),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">X_init</span></div>
+
+<div class="viewcode-block" id="fidelity_selection"><a class="viewcode-back" href="../../mfscbo/mfscbo_optimization.html#mfscbo.mfscbo_optimization.fidelity_selection">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">fidelity_selection</span><span class="p">(</span><span class="n">Y_next</span><span class="p">,</span> <span class="n">means_next</span><span class="p">,</span> <span class="n">time_costs</span><span class="p">,</span> <span class="n">fidelities</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Select the best fidelity level based on the expected improvement.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        Y_next (List[torch.Tensor]): The predicted values for the next points of shape (batch, nb_fidelities).</span>
+<span class="sd">        means_next (List[torch.Tensor]): The predicted means for the next points of shape (batch, nb_fidelities).</span>
+<span class="sd">        time_costs (List[float]): The time costs for each fidelity level of shape (nb_fidelities,).</span>
+<span class="sd">        fidelities (List[int]): The list of fidelity levels to consider.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (torch.Tensor, torch.Tensor): (The selected fidelity level for each point of shape (batch, 1), the corresponding terms for each fidelity level of shape (batch, nb_fidelities)).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">terms</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fidelities</span> <span class="p">:</span>
+        <span class="n">term</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">Y_next</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">means_next</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">time_costs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">terms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">term</span><span class="p">)</span>
+    <span class="n">terms</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">terms</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#[batch, nb_fidelities]</span>
+    <span class="n">best_fidelity</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">terms</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="c1">#[batch, 1]  </span>
+    <span class="k">return</span> <span class="n">best_fidelity</span><span class="p">,</span> <span class="n">terms</span></div>
+
+<div class="viewcode-block" id="generate_batch_mf"><a class="viewcode-back" href="../../mfscbo/mfscbo_optimization.html#mfscbo.mfscbo_optimization.generate_batch_mf">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">generate_batch_mf</span><span class="p">(</span>
+    <span class="n">type_of_batch</span><span class="p">,</span>
+    <span class="n">state</span><span class="p">,</span>
+    <span class="n">model_lf</span><span class="p">,</span>  
+    <span class="n">models_delta</span><span class="p">,</span>  
+    <span class="n">rhos</span><span class="p">,</span>  
+    <span class="n">time_costs</span><span class="p">,</span>   
+    <span class="n">X_hf</span><span class="p">,</span>  
+    <span class="n">Y_hf</span><span class="p">,</span>  
+    <span class="n">C_hf</span><span class="p">,</span>  
+    <span class="n">batch_size</span><span class="p">,</span>
+    <span class="n">n_candidates</span><span class="p">,</span>  
+    <span class="n">constraint_model</span><span class="p">,</span>
+    <span class="n">sobol</span><span class="p">:</span> <span class="n">SobolEngine</span><span class="p">,</span>
+    <span class="n">torchargs</span><span class="p">,</span>
+    <span class="p">):</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Generate a batch of points to evaluate by sampling from the multi-fidelity model.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        type_of_batch (str): Type of batch to generate (shoot of batch_size x n_candidates points then select the best ones : &quot;parallel&quot; or  the batch_size best points from n_candidates points : &quot;sequential&quot;)</span>
+<span class="sd">        state (ScboState): Current state of the optimization</span>
+<span class="sd">        model_lf (botorch.models.SingleTaskGP): Fitted low fidelity GP model</span>
+<span class="sd">        models_delta (List[botorch.models.SingleTaskGP]): Fitted delta GP models</span>
+<span class="sd">        rhos (List[float]): Correlation parameter between fidelities</span>
+<span class="sd">        time_costs (List[float]): Time costs of the fidelity functions</span>
+<span class="sd">        X_hf (torch.Tensor): High fidelity points of shape (n_hf_pts, dim)</span>
+<span class="sd">        Y_hf (torch.Tensor): High fidelity values of shape (n_hf_pts, 1)</span>
+<span class="sd">        C_hf (torch.Tensor): Constraint values of shape (n_pts, n_constraints)</span>
+<span class="sd">        batch_size (int): Number of points to sample</span>
+<span class="sd">        n_candidates (int): Number of candidate points for thomson sampling</span>
+<span class="sd">        constraint_model (botorch.models.ModelListGP): Fitted constraints GP models</span>
+<span class="sd">        sobol (SobolEngine): Sobol engine for quasi-random sampling</span>
+<span class="sd">        torchargs (dict): Dictionary containing the device on which the tensors will be stored</span>
+<span class="sd">                            and the dtype (device : str, dtype : torch.dtype)</span>
+
+<span class="sd">    Returns:  </span>
+<span class="sd">        (torch.Tensor, torch.Tensor): (Sampled points of shape (batch_size, dim), criterion for fidelity selection of shape (batch_size, nb_fidelities))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">X_hf</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="n">X_hf</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="n">torch</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">Y_hf</span><span class="p">))</span>
+
+    <span class="c1"># Fidelity parameters</span>
+    <span class="n">nb_fidelities</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">models_delta</span><span class="p">)</span> 
+    <span class="n">fidelities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nb_fidelities</span><span class="p">)</span>
+
+    <span class="c1"># Create the TR bounds according high fidelity points</span>
+    <span class="n">best_ind</span> <span class="o">=</span> <span class="n">get_best_index_for_batch</span><span class="p">(</span><span class="n">Y</span><span class="o">=</span><span class="n">Y_hf</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="n">C_hf</span><span class="p">)</span>
+    <span class="n">x_center</span> <span class="o">=</span> <span class="n">X_hf</span><span class="p">[</span><span class="n">best_ind</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="n">tr_lb</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">x_center</span> <span class="o">-</span> <span class="n">state</span><span class="o">.</span><span class="n">length</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">tr_ub</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">x_center</span> <span class="o">+</span> <span class="n">state</span><span class="o">.</span><span class="n">length</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">X_hf</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">pert</span> <span class="o">=</span> <span class="n">sobol</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">n_candidates</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="o">**</span><span class="n">torchargs</span><span class="p">)</span>
+    <span class="n">pert</span> <span class="o">=</span> <span class="n">tr_lb</span> <span class="o">+</span> <span class="n">pert</span> <span class="o">*</span> <span class="p">(</span><span class="n">tr_ub</span> <span class="o">-</span> <span class="n">tr_lb</span><span class="p">)</span>
+
+    <span class="c1"># Create a perturbation mask</span>
+    <span class="n">prob_perturb</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">20.0</span> <span class="o">/</span> <span class="n">dim</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n_candidates</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="o">**</span><span class="n">torchargs</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">prob_perturb</span>
+    <span class="n">ind</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">mask</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ind</span><span class="p">),),</span> <span class="n">device</span><span class="o">=</span><span class="n">torchargs</span><span class="p">[</span><span class="s1">&#39;device&#39;</span><span class="p">])]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># Create candidate points from the perturbations and the mask</span>
+    <span class="n">X_cand</span> <span class="o">=</span> <span class="n">x_center</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">n_candidates</span><span class="p">,</span> <span class="n">dim</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="n">X_cand</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">pert</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span> <span class="p">:</span>
+        <span class="n">f_samples</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">type_of_batch</span> <span class="o">==</span> <span class="s2">&quot;parallel&quot;</span> <span class="p">:</span>
+
+            <span class="c1">## samples from the multi-fidelity model</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">f_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">samples_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="o">=</span><span class="n">model_lf</span><span class="p">,</span>
+                                                       <span class="n">models_delta</span><span class="o">=</span><span class="n">models_delta</span><span class="p">,</span>
+                                                       <span class="n">rhos</span><span class="o">=</span><span class="n">rhos</span><span class="p">,</span>
+                                                       <span class="n">X</span><span class="o">=</span><span class="n">X_cand</span><span class="p">,</span>
+                                                       <span class="n">fid</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+                                                       <span class="n">n_samples</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>  <span class="c1">#[batch, n_candidates, 1]</span>
+
+            <span class="n">f_high_samples</span> <span class="o">=</span> <span class="n">f_samples</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1">#[batch, n_candidates, 1]</span>
+
+            <span class="c1">## samples from the constraints models [batch, n_candidates, n_constraints]</span>
+            <span class="n">constraint_post</span> <span class="o">=</span> <span class="n">constraint_model</span><span class="o">.</span><span class="n">posterior</span><span class="p">(</span><span class="n">X_cand</span><span class="p">)</span>
+            <span class="n">constraints_samples</span> <span class="o">=</span> <span class="n">constraint_post</span><span class="o">.</span><span class="n">rsample</span><span class="p">(</span><span class="n">sample_shape</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">([</span><span class="n">batch_size</span><span class="p">]))</span>
+
+            <span class="c1">##mask of feasible points</span>
+            <span class="n">is_feas</span> <span class="o">=</span> <span class="p">(</span><span class="n">constraints_samples</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#[batch, n_candidates]</span>
+            <span class="n">has_feas</span> <span class="o">=</span> <span class="n">is_feas</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#[batch]</span>
+
+            <span class="c1">##scores</span>
+            <span class="c1">#if a realization has at least one feasible point, we use the objective value</span>
+            <span class="c1">#as a score and set all infeasible points to -inf</span>
+            <span class="c1">#if a realization doesn&#39;t have a feasible candidate, we set the score to the </span>
+            <span class="c1">#candidate with the lowest total violation</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">f_high_samples</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span> <span class="c1">#[batch, n_candidates]</span>
+            <span class="n">scores</span><span class="p">[</span><span class="o">~</span><span class="n">is_feas</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+
+            <span class="c1">#along each batch, if no feasible point, we set the scores to - sum of violations else we keep the scores    </span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">has_feas</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="p">:</span>
+                <span class="n">total_violation</span> <span class="o">=</span> <span class="n">constraints_samples</span><span class="p">[</span><span class="o">~</span><span class="n">has_feas</span><span class="p">]</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> 
+                <span class="n">scores</span><span class="p">[</span><span class="o">~</span><span class="n">has_feas</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">total_violation</span>
+            
+            <span class="c1">##pick the best points according to the type of sampling</span>
+            <span class="n">argmax_idx</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#[batch]</span>
+            <span class="n">X_next</span> <span class="o">=</span> <span class="n">X_cand</span><span class="p">[</span><span class="n">argmax_idx</span><span class="p">]</span> <span class="c1">#[batch, dim]</span>
+
+            <span class="c1">## mean predictions</span>
+            <span class="n">means_next</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">means_next</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mean_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="o">=</span><span class="n">model_lf</span><span class="p">,</span>
+                                                     <span class="n">models_delta</span><span class="o">=</span><span class="n">models_delta</span><span class="p">,</span>
+                                                     <span class="n">rhos</span><span class="o">=</span><span class="n">rhos</span><span class="p">,</span>
+                                                     <span class="n">X</span><span class="o">=</span><span class="n">X_next</span><span class="p">,</span>
+                                                     <span class="n">fid</span><span class="o">=</span><span class="n">i</span><span class="p">))</span>  <span class="c1">#[batch] </span>
+            <span class="c1">## Y predictions</span>
+            <span class="n">Y_next</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">Y_next</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f_samples</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">batch_size</span><span class="p">),</span> <span class="n">argmax_idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="c1">#[batch]</span>
+         
+            <span class="c1">## fidelity selection</span>
+            <span class="n">best_fidelity</span><span class="p">,</span> <span class="n">criterion</span> <span class="o">=</span> <span class="n">fidelity_selection</span><span class="p">(</span><span class="n">Y_next</span><span class="o">=</span><span class="n">Y_next</span><span class="p">,</span>
+                                               <span class="n">means_next</span><span class="o">=</span><span class="n">means_next</span><span class="p">,</span> 
+                                               <span class="n">time_costs</span><span class="o">=</span><span class="n">time_costs</span><span class="p">,</span>
+                                               <span class="n">fidelities</span><span class="o">=</span><span class="n">fidelities</span><span class="p">)</span>  <span class="c1">#[batch, 1]</span>
+
+            <span class="c1">##</span>
+            <span class="n">X_next</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">X_next</span><span class="p">,</span> <span class="n">best_fidelity</span><span class="p">),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#[batch, dim+1]</span>
+        
+        <span class="k">elif</span> <span class="n">type_of_batch</span> <span class="o">==</span> <span class="s2">&quot;sequential&quot;</span> <span class="p">:</span>
+            <span class="c1">## samples from the multi-fidelity model</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">f_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">samples_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="o">=</span><span class="n">model_lf</span><span class="p">,</span>
+                                                       <span class="n">models_delta</span><span class="o">=</span><span class="n">models_delta</span><span class="p">,</span>
+                                                       <span class="n">rhos</span><span class="o">=</span><span class="n">rhos</span><span class="p">,</span>
+                                                       <span class="n">X</span><span class="o">=</span><span class="n">X_cand</span><span class="p">,</span>
+                                                       <span class="n">fid</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+                                                       <span class="n">n_samples</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>  <span class="c1">#[1, n_candidates, 1]</span>
+                
+            <span class="n">f_high_samples</span> <span class="o">=</span> <span class="n">f_samples</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1">#[1, n_candidates, 1]</span>
+
+            <span class="c1">## samples from the constraints models [1, n_candidates, n_constraints]</span>
+            <span class="n">constraint_post</span> <span class="o">=</span> <span class="n">constraint_model</span><span class="o">.</span><span class="n">posterior</span><span class="p">(</span><span class="n">X_cand</span><span class="p">)</span>
+            <span class="n">constraints_samples</span> <span class="o">=</span> <span class="n">constraint_post</span><span class="o">.</span><span class="n">rsample</span><span class="p">(</span><span class="n">sample_shape</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">([</span><span class="mi">1</span><span class="p">]))</span>
+
+            <span class="c1">##mask of feasible points</span>
+            <span class="n">is_feas</span> <span class="o">=</span> <span class="p">(</span><span class="n">constraints_samples</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#[1, n_candidates]</span>
+            <span class="n">has_feas</span> <span class="o">=</span> <span class="n">is_feas</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#[1]</span>
+
+            <span class="c1">##scores :</span>
+            <span class="c1">#if a realization has at least one feasible point, we use the objective value</span>
+            <span class="c1">#as a score and set all infeasible points to -inf</span>
+            <span class="c1">#if a realization doesn&#39;t have a feasible candidate, we set the score to the </span>
+            <span class="c1">#candidate with the lowest total violation</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">f_high_samples</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span> <span class="c1">#[1, n_candidates]</span>
+            <span class="n">scores</span><span class="p">[</span><span class="o">~</span><span class="n">is_feas</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">has_feas</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="p">:</span>
+                <span class="n">total_violation</span> <span class="o">=</span> <span class="n">constraints_samples</span><span class="p">[</span><span class="o">~</span><span class="n">has_feas</span><span class="p">]</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#[1, n_candidates]</span>
+                <span class="n">scores</span><span class="p">[</span><span class="o">~</span><span class="n">has_feas</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">total_violation</span>
+
+            <span class="c1">##pick the batch_size best points according to the type of sampling</span>
+            <span class="n">argmax_idx</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">indices</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1">#[batch]</span>
+            <span class="n">X_next</span> <span class="o">=</span> <span class="n">X_cand</span><span class="p">[</span><span class="n">argmax_idx</span><span class="p">]</span> <span class="c1">#[batch, dim]</span>
+
+            <span class="c1">## mean predictions</span>
+            <span class="n">means_next</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">means_next</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mean_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="o">=</span><span class="n">model_lf</span><span class="p">,</span>
+                                                     <span class="n">models_delta</span><span class="o">=</span><span class="n">models_delta</span><span class="p">,</span>
+                                                     <span class="n">rhos</span><span class="o">=</span><span class="n">rhos</span><span class="p">,</span>
+                                                     <span class="n">X</span><span class="o">=</span><span class="n">X_next</span><span class="p">,</span>
+                                                     <span class="n">fid</span><span class="o">=</span><span class="n">i</span><span class="p">))</span>  <span class="c1">#[batch] </span>
+           
+            <span class="c1">## Y predictions</span>
+            <span class="n">Y_next</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">Y_next</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f_samples</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">,</span> <span class="n">argmax_idx</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span> <span class="c1">#[batch]</span>
+
+            <span class="c1">## fidelity selection</span>
+            <span class="n">best_fidelity</span><span class="p">,</span> <span class="n">criterion</span> <span class="o">=</span> <span class="n">fidelity_selection</span><span class="p">(</span><span class="n">Y_next</span><span class="o">=</span><span class="n">Y_next</span><span class="p">,</span> 
+                                               <span class="n">means_next</span><span class="o">=</span><span class="n">means_next</span><span class="p">,</span> 
+                                               <span class="n">time_costs</span><span class="o">=</span><span class="n">time_costs</span><span class="p">,</span> 
+                                               <span class="n">fidelities</span><span class="o">=</span><span class="n">fidelities</span><span class="p">)</span>  <span class="c1">#[batch, 1]</span>
+
+            <span class="c1">##</span>
+            <span class="n">X_next</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">X_next</span><span class="p">,</span> <span class="n">best_fidelity</span><span class="p">),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="c1">#[batch, dim+1]</span>
+
+
+        <span class="k">return</span> <span class="n">X_next</span><span class="p">,</span> <span class="n">criterion</span></div>
+
+
+<div class="viewcode-block" id="ScboMfOptimizer"><a class="viewcode-back" href="../../mfscbo/mfscbo_optimization.html#mfscbo.mfscbo_optimization.ScboMfOptimizer">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">ScboMfOptimizer</span><span class="p">:</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                 <span class="n">eval_objectives</span><span class="p">,</span>
+                 <span class="n">constraints</span><span class="p">,</span>
+                 <span class="n">rhos</span><span class="p">,</span>
+                 <span class="n">costs</span><span class="p">,</span>
+                 <span class="n">dim</span><span class="p">,</span>
+                 <span class="n">n_pts</span><span class="p">,</span>
+                 <span class="n">bounds</span><span class="p">,</span>
+                 <span class="n">type_of_batch</span><span class="p">,</span>
+                 <span class="n">type_of_centering</span><span class="p">,</span>
+                 <span class="n">torchargs</span><span class="p">,</span>
+                 <span class="n">restart</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">test</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Optimization class for SCBO in order to maximize the objective function. The inputs are in dimension dim+1 where the last dimension is the fidelity dimension (0 : low fidelity, 1 : high fidelity).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            eval_objectives (List[callable]): List of functions to evaluate [eval_objective_low,...,eval_objective_high]</span>
+<span class="sd">            constraints (callable): Function that takes a tensor of shape (n_pts, dim) and returns a tensor of shape (n_pts, n_constraints)</span>
+<span class="sd">            rhos (List[float]): Correlation parameters between the two fidelities</span>
+<span class="sd">            costs (List[float]): Time costs of the fidelity functions</span>
+<span class="sd">            dim (int): Dimension of the problem (without the fidelity dimension)</span>
+<span class="sd">            n_pts (List[int]): Number of points to sample</span>
+<span class="sd">            bounds (torch.Tensor): Bounds of the problem of shape (2, dim)</span>
+<span class="sd">            type_of_batch (str): Type of batch to generate (shoot of batch_size x n_candidates points then select the best ones : &quot;parallel&quot; or  the batch_size best points from n_candidates points : &quot;sequential&quot;)</span>
+<span class="sd">            type_of_centering (str): Type of centering (&quot;evaluated&quot; or &quot;predicted&quot;)</span>
+<span class="sd">            torchargs (dict): Dictionary containing the device on which the tensors will be stored</span>
+<span class="sd">                                and the dtype (device : str, dtype : torch.dtype)</span>
+<span class="sd">            restart (bool, optional): If True, the optimizer restarts when the trust region becomes too small. Defaults to False.</span>
+<span class="sd">            test (bool, optional): If True, the optimizer is in test mode and evaluates best points with high objective in the predicted case. Defaults to False.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            None</span>
+<span class="sd">           </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_pts</span> <span class="o">=</span> <span class="n">n_pts</span>  <span class="c1"># [n_low_fidelity_points, ..., n_high_fidelity_points]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="o">=</span> <span class="n">bounds</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span> <span class="o">=</span> <span class="n">torchargs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span> <span class="o">=</span> <span class="n">eval_objectives</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rhos</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rhos</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">costs</span> <span class="o">=</span> <span class="n">costs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span> <span class="o">=</span> <span class="n">constraints</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_of_batch</span> <span class="o">=</span> <span class="n">type_of_batch</span>  <span class="c1"># &quot;parallel&quot; or &quot;sequential&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span> <span class="o">=</span> <span class="n">type_of_centering</span>  <span class="c1"># &quot;evaluated&quot; or &quot;predicted&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test</span> <span class="o">=</span> <span class="n">test</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">restart</span> <span class="o">=</span> <span class="n">restart</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">C</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_fidelities</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_pts</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_fidelities</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_Y</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_X</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_C</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generated_Y</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generated_X</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generated_C</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">criterions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trust_region_lengths</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gps_info</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_fidelities</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nb_iter</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_fidelities</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cost_iter</span> <span class="o">=</span> <span class="p">[]</span>
+        
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">paramms</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s2">&quot;dim&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;bounds&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()),</span>
+            <span class="p">(</span><span class="s2">&quot;nb_fidelities&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_fidelities</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;n_pts&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_pts</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;rhos&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhos</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;costs&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">costs</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;type_of_batch&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_of_batch</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;type_of_centering&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;restart&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">restart</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">test</span><span class="p">),</span>
+        <span class="p">]</span>
+        
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_pts</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;Length of n_pts (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_pts</span><span class="p">)</span><span class="si">}</span><span class="s2">) must be equal to number of functions (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhos</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;Length of rhos (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhos</span><span class="p">)</span><span class="si">}</span><span class="s2">) must be equal to number of functions (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">costs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;Length of costs (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">costs</span><span class="p">)</span><span class="si">}</span><span class="s2">) must be equal to number of functions (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_of_batch</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;parallel&quot;</span><span class="p">,</span> <span class="s2">&quot;sequential&quot;</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;type_of_batch must be &#39;parallel&#39; or &#39;sequential&#39;, got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">type_of_batch</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;evaluated&quot;</span><span class="p">,</span> <span class="s2">&quot;predicted&quot;</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;type_of_centering must be &#39;evaluated&#39; or &#39;predicted&#39;, got </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span><span class="si">}</span><span class="s2">&quot;</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_print_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Print the parameters of the optimizer.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            verbose (bool, optional): If True, print the parameters. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+
+            <span class="c1"># Format parameters to a better display for arrays</span>
+            <span class="n">formatted_params</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">paramms</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                        <span class="n">value_str</span> <span class="o">=</span> <span class="s2">&quot;[&quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">value</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;]&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">value_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="n">formatted_params</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">key</span><span class="p">,</span> <span class="n">value_str</span><span class="p">))</span>
+            
+            <span class="c1"># Calculate column widths</span>
+            <span class="n">key_width</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">formatted_params</span><span class="p">)</span>
+            <span class="n">val_width</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">))</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">formatted_params</span><span class="p">)</span>
+
+            <span class="n">title</span> <span class="o">=</span> <span class="s2">&quot; Parameters for MF-SCBO Optimization &quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">title</span><span class="o">.</span><span class="n">center</span><span class="p">(</span><span class="n">key_width</span> <span class="o">+</span> <span class="n">val_width</span> <span class="o">+</span> <span class="mi">7</span><span class="p">,</span> <span class="s2">&quot;=&quot;</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;_&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="n">key_width</span> <span class="o">+</span> <span class="n">val_width</span> <span class="o">+</span> <span class="mi">7</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;| </span><span class="si">{</span><span class="s1">&#39;Parameter&#39;</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">key_width</span><span class="p">)</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="s1">&#39;Value&#39;</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">val_width</span><span class="p">)</span><span class="si">}</span><span class="s2"> |&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="n">key_width</span> <span class="o">+</span> <span class="n">val_width</span> <span class="o">+</span> <span class="mi">7</span><span class="p">))</span>
+
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">formatted_params</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;| </span><span class="si">{</span><span class="n">key</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">key_width</span><span class="p">)</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">value</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">val_width</span><span class="p">)</span><span class="si">}</span><span class="s2"> |&quot;</span><span class="p">)</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="n">key_width</span> <span class="o">+</span> <span class="n">val_width</span> <span class="o">+</span> <span class="mi">7</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_print_optimization_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                                      <span class="n">max_cost</span><span class="p">,</span> 
+                                      <span class="n">batch_size</span><span class="p">,</span> 
+                                      <span class="n">path</span><span class="p">,</span> 
+                                      <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Print the optimization parameters.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            max_cost (float): Maximum total cost.</span>
+<span class="sd">            batch_size (int): Batch size.   </span>
+<span class="sd">            path (str): Path to save the results.</span>
+<span class="sd">            verbose (bool, optional): If True, print the parameters. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">verbose</span> <span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting MF-SCBO optimization...&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Max cost : </span><span class="si">{</span><span class="n">max_cost</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Batch size : </span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Path : </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+       
+    <span class="k">def</span><span class="w"> </span><span class="nf">_print_iteration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                        <span class="n">iteration</span><span class="p">,</span> 
+                        <span class="n">current_cost</span><span class="p">,</span>
+                        <span class="n">current_total_cost</span><span class="p">,</span> 
+                        <span class="n">max_cost</span><span class="p">,</span>
+                        <span class="n">current_best_x</span><span class="p">,</span>
+                        <span class="n">current_best_y</span><span class="p">,</span>
+                        <span class="n">length_tr</span><span class="p">,</span>
+                        <span class="n">is_feasible</span><span class="p">,</span>
+                        <span class="n">smallest_total_violation</span><span class="p">,</span>
+                        <span class="n">generated_X</span><span class="p">,</span>
+                        <span class="n">generated_Y</span><span class="p">,</span>
+                        <span class="n">criterion</span><span class="p">,</span>
+                        <span class="n">generated_fidelities</span><span class="p">,</span>
+                        <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span> 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Print the results of the current iteration.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            iteration (int): Current iteration number.</span>
+<span class="sd">            current_cost (float): Cost of the current iteration.</span>
+<span class="sd">            current_total_cost (float): Current total cost.</span>
+<span class="sd">            max_cost (float): Maximum total cost.</span>
+<span class="sd">            current_best_x (np.ndarray): Current best x point.</span>
+<span class="sd">            current_best_y (float): Current best y value.</span>
+<span class="sd">            length_tr (float): Current trust region length.</span>
+<span class="sd">            is_feasible (bool): Whether the current best point is feasible.</span>
+<span class="sd">            smallest_total_violation (float): Smallest total violation of the constraints.</span>
+<span class="sd">            generated_X (np.ndarray): Generated points in the current iteration.</span>
+<span class="sd">            generated_Y (np.ndarray): Generated y values in the current iteration.</span>
+<span class="sd">            generated_fidelities (list): Generated fidelities in the current iteration.</span>
+<span class="sd">            verbose (bool, optional): If True, print the iteration results. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>    
+
+        <span class="k">if</span> <span class="n">verbose</span> <span class="p">:</span>
+
+            <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; Iteration </span><span class="si">{</span><span class="n">iteration</span><span class="si">}</span><span class="s2"> : cost/max_cost = </span><span class="si">{</span><span class="n">current_total_cost</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">max_cost</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">title</span><span class="p">)</span> <span class="o">+</span> <span class="mi">15</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">title</span><span class="o">.</span><span class="n">center</span><span class="p">(</span><span class="mi">15</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">title</span><span class="p">),</span> <span class="s2">&quot; &quot;</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">title</span><span class="p">)</span> <span class="o">+</span> <span class="mi">15</span><span class="p">))</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Feasible : </span><span class="si">{</span><span class="n">is_feasible</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Smallest total violation : </span><span class="si">{</span><span class="n">smallest_total_violation</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Best x : </span><span class="si">{</span><span class="n">current_best_x</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Best y : </span><span class="si">{</span><span class="n">current_best_y</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Trust region length : </span><span class="si">{</span><span class="n">length_tr</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cost of iteration : </span><span class="si">{</span><span class="n">current_cost</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total points : </span><span class="si">{</span><span class="nb">sum</span><span class="p">([</span><span class="nb">sum</span><span class="p">(</span><span class="n">nb_iter_fid_i</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">nb_iter_fid_i</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">nb_iter</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="c1">#sum of all nb_iter</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Generated x :&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">generated_X</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Generated y :&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">generated_Y</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Associated criterion :&quot;</span> <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">criterion</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Generated fidelities :&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">generated_fidelities</span><span class="p">)</span>
+           
+    <span class="k">def</span><span class="w"> </span><span class="nf">_print_gp_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">fidelity</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Print the parameters of the GP model.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            model (botorch.models.SingleTaskGP or DeltaGPModel): GP model to print the parameters of.</span>
+<span class="sd">            fidelity (int): Fidelity level of the model.</span>
+<span class="sd">            verbose (bool, optional): If True, print the parameters. Defaults to True.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">gp_info</span> <span class="o">=</span> <span class="n">get_gp_info</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">fidelity</span><span class="p">)</span>
+        <span class="n">noise</span> <span class="o">=</span> <span class="n">gp_info</span><span class="p">[</span><span class="s1">&#39;noise&#39;</span><span class="p">]</span>
+        <span class="n">noise_bounds</span> <span class="o">=</span> <span class="n">gp_info</span><span class="p">[</span><span class="s1">&#39;noise_bounds&#39;</span><span class="p">]</span>
+        <span class="n">length_scale</span> <span class="o">=</span> <span class="n">gp_info</span><span class="p">[</span><span class="s1">&#39;length_scale&#39;</span><span class="p">]</span>
+        <span class="n">length_scale_bounds</span> <span class="o">=</span> <span class="n">gp_info</span><span class="p">[</span><span class="s1">&#39;length_scale_bounds&#39;</span><span class="p">]</span>  
+        <span class="n">rho</span> <span class="o">=</span> <span class="n">gp_info</span><span class="p">[</span><span class="s1">&#39;rho&#39;</span><span class="p">]</span>
+        <span class="n">rho_bounds</span> <span class="o">=</span> <span class="n">gp_info</span><span class="p">[</span><span class="s1">&#39;rho_bounds&#39;</span><span class="p">]</span>  
+        <span class="c1">#parameter | value | bounds</span>
+        <span class="k">if</span> <span class="n">verbose</span> <span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="n">params</span><span class="o">.</span><span class="n">append</span><span class="p">((</span>
+                <span class="s2">&quot;Length scale&quot;</span><span class="p">,</span>
+                <span class="n">length_scale</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">length_scale_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">length_scale_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">))</span>
+            <span class="n">params</span><span class="o">.</span><span class="n">append</span><span class="p">((</span>
+                <span class="s2">&quot;Noise&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">noise</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">noise_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">noise_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">))</span>
+            <span class="k">if</span> <span class="n">fidelity</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">params</span><span class="o">.</span><span class="n">append</span><span class="p">((</span>
+                    <span class="s2">&quot;Rho&quot;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">rho</span><span class="si">:</span><span class="s2">.3e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">rho_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">rho_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">)&quot;</span>
+                <span class="p">))</span>
+
+            <span class="c1"># Column widths </span>
+            <span class="n">col1_w</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="p">)</span>      <span class="c1"># Parameter</span>
+            <span class="n">col2_w</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="p">)</span> <span class="c1"># Value</span>
+            <span class="n">col3_w</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="p">)</span> <span class="c1"># Bounds</span>
+
+            <span class="n">total_w</span> <span class="o">=</span> <span class="n">col1_w</span> <span class="o">+</span> <span class="n">col2_w</span> <span class="o">+</span> <span class="n">col3_w</span> <span class="o">+</span> <span class="mi">10</span>
+
+            
+            <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; GP Model Parameters (fidelity </span><span class="si">{</span><span class="n">fidelity</span><span class="si">}</span><span class="s2">) &quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">title</span><span class="o">.</span><span class="n">center</span><span class="p">(</span><span class="n">total_w</span><span class="p">,</span> <span class="s2">&quot;=&quot;</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;_&quot;</span> <span class="o">*</span> <span class="n">total_w</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;| </span><span class="si">{</span><span class="s1">&#39;Parameter&#39;</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">col1_w</span><span class="p">)</span><span class="si">}</span><span class="s2"> | &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;Value&#39;</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">col2_w</span><span class="p">)</span><span class="si">}</span><span class="s2"> | &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;Bounds&#39;</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">col3_w</span><span class="p">)</span><span class="si">}</span><span class="s2"> |&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="n">total_w</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;| </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">col1_w</span><span class="p">)</span><span class="si">}</span><span class="s2"> | &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">col2_w</span><span class="p">)</span><span class="si">}</span><span class="s2"> | &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">col3_w</span><span class="p">)</span><span class="si">}</span><span class="s2"> |&quot;</span><span class="p">)</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="n">total_w</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_dir_and_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Create the directory and log file for the optimization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (str): Path to the directory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">log_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span> <span class="o">+</span> <span class="s2">&quot;/MFSCBO_log.txt&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">Print_log_and_console</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">log_file</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_close_log</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Close the log file. &quot;&quot;&quot;</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">__stdout__</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">iteration</span><span class="p">,</span>
+                    <span class="n">trains_X</span><span class="p">,</span>
+                    <span class="n">trains_Y</span><span class="p">,</span>
+                    <span class="n">trains_C</span><span class="p">,</span>
+                    <span class="n">state_length</span><span class="p">,</span>
+                    <span class="n">state_best_xvalue</span><span class="p">,</span>
+                    <span class="n">state_best_value</span><span class="p">,</span>
+                    <span class="n">state_best_constraint_values</span><span class="p">,</span>
+                    <span class="n">criterion</span><span class="p">,</span>
+                    <span class="n">model_low</span><span class="p">,</span>
+                    <span class="n">models_delta</span><span class="p">):</span> 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Update the data to be saved.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            iteration (int): Current iteration number.</span>
+<span class="sd">            trains_X (List[torch.Tensor]): List of training points for each fidelity level.</span>
+<span class="sd">            trains_Y (List[torch.Tensor]): List of training values for each fidelity level.</span>
+<span class="sd">            trains_C (List[torch.Tensor]): List of constraint values for each fidelity level.</span>
+<span class="sd">            state_length (float): Current trust region length.</span>
+<span class="sd">            state_best_xvalue (torch.Tensor): Current best x point.</span>
+<span class="sd">            state_best_value (float): Current best y value.</span>
+<span class="sd">            state_best_constraint_values (torch.Tensor): Current best constraint values.</span>
+<span class="sd">            criterion (torch.Tensor): Criterion values for the current iteration.</span>
+<span class="sd">            model_low (botorch.models.SingleTaskGP): Fitted low fidelity GP model.</span>
+<span class="sd">            models_delta (List[botorch.models.SingleTaskGP]): Fitted delta GP models.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        
+        <span class="n">trains_X_unnormalized</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+            <span class="n">trains_X_unnormalized</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unnormalize</span><span class="p">(</span><span class="n">trains_X</span><span class="p">[</span><span class="n">fid</span><span class="p">][:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">))</span>
+            <span class="n">trains_X_unnormalized</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">trains_X_unnormalized</span><span class="p">[</span><span class="n">fid</span><span class="p">],</span> <span class="n">fid</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">trains_X_unnormalized</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generated_X</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">trains_X_unnormalized</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generated_Y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">trains_Y</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generated_C</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">trains_C</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trust_region_lengths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">state_length</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_X</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unnormalize</span><span class="p">(</span><span class="n">state_best_xvalue</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_Y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">state_best_value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_C</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">state_best_constraint_values</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">iteration</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">criterions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">criterion</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
+
+        <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+            <span class="k">if</span> <span class="n">fid</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">model_low</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">:</span>
+                    <span class="n">gp_info</span> <span class="o">=</span> <span class="n">get_gp_info</span><span class="p">(</span><span class="n">model_low</span><span class="p">,</span> <span class="n">fid</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">gps_info</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gp_info</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">fid</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">models_delta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="p">:</span>
+                    <span class="n">gp_info</span> <span class="o">=</span> <span class="n">get_gp_info</span><span class="p">(</span><span class="n">models_delta</span><span class="p">[</span><span class="n">fid</span><span class="p">],</span> <span class="n">fid</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">gps_info</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gp_info</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+             <span class="n">gps_info</span><span class="p">,</span>
+             <span class="n">generated_X</span><span class="p">,</span>
+             <span class="n">generated_Y</span><span class="p">,</span>
+             <span class="n">generated_C</span><span class="p">,</span>
+             <span class="n">criterions</span><span class="p">,</span>
+             <span class="n">trust_region_lengths</span><span class="p">,</span>
+             <span class="n">best_X</span><span class="p">,</span>
+             <span class="n">best_Y</span><span class="p">,</span>
+             <span class="n">best_C</span><span class="p">,</span>
+             <span class="n">iterations</span><span class="p">,</span>
+             <span class="n">nb_iter</span><span class="p">,</span>
+             <span class="n">cost_iter</span><span class="p">,</span>
+             <span class="n">path</span> <span class="p">):</span> 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Save the optimization results.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            gps_info (List[dict]): List of GP model information for each fidelity level.</span>
+<span class="sd">            generated_X (List[torch.Tensor]): List of generated points for each iteration.</span>
+<span class="sd">            generated_Y (List[torch.Tensor]): List of generated values for each iteration.</span>
+<span class="sd">            generated_C (List[torch.Tensor]): List of generated constraint values for each iteration.</span>
+<span class="sd">            criterions (List[torch.Tensor]): List of criterion values for each iteration.</span>
+<span class="sd">            trust_region_lengths (List[float]): List of trust region lengths for each iteration.</span>
+<span class="sd">            best_X (List[torch.Tensor]): List of best points (according best_Y) for each iteration.</span>
+<span class="sd">            best_Y (List[torch.Tensor]): List of best values for each iteration.</span>
+<span class="sd">            best_C (List[torch.Tensor]): List of constraints (according best_Y) values for each iteration.</span>
+<span class="sd">            iterations (List[int]): List of iteration numbers.</span>
+<span class="sd">            nb_iter (List[List[int]]): List of number of iterations for each fidelity level.</span>
+<span class="sd">            cost_iter (List[float]): List of total costs for each iteration.</span>
+<span class="sd">            path (str): Path to save the results.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">np</span><span class="o">.</span><span class="n">savez</span><span class="p">(</span><span class="n">path</span><span class="o">+</span><span class="s2">&quot;/MFSCBO_data.npz&quot;</span><span class="p">,</span>
+                <span class="n">gps_info</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">gps_info</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+                <span class="n">generated_X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">generated_X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+                <span class="n">generated_Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">generated_Y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+                <span class="n">generated_C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">generated_C</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+                <span class="n">criterions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">criterions</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+                <span class="n">trust_region_lengths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">trust_region_lengths</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+                <span class="n">best_X</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">best_X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+                <span class="n">best_Y</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">best_Y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+                <span class="n">best_C</span><span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">best_C</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">),</span>
+                <span class="n">iterations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">iterations</span><span class="p">),</span>
+                <span class="n">nb_iter</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">nb_iter</span><span class="p">),</span>
+                <span class="n">cost_iter</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cost_iter</span><span class="p">))</span>
+        
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">type_of_centering</span><span class="p">,</span>
+                  <span class="n">type_of_batch</span><span class="p">,</span>
+                  <span class="n">batch_size</span><span class="p">,</span>
+                  <span class="n">max_cost</span><span class="p">,</span>
+                  <span class="n">restart</span><span class="p">,</span>
+                  <span class="n">test</span><span class="p">,</span>
+                  <span class="n">path</span> <span class="p">)</span> <span class="p">:</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Save the optimization information.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            type_of_centering (str): Type of centering (&quot;evaluated&quot; or &quot;predicted&quot;).</span>
+<span class="sd">            type_of_batch (str): Type of batch (&quot;parallel&quot; or &quot;sequential&quot;).</span>
+<span class="sd">            batch_size (int): Batch size.</span>
+<span class="sd">            max_cost (float): Maximum total cost.</span>
+<span class="sd">            restart (bool): Whether the optimizer restarts when the trust region becomes too small.</span>
+<span class="sd">            test (bool): Whether the optimizer is in test mode and evaluates best points with high objective in the predicted case.</span>
+<span class="sd">            path (str): Path to save the results.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">info</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;type_of_centering&quot;</span><span class="p">:</span> <span class="n">type_of_centering</span><span class="p">,</span>
+            <span class="s2">&quot;type_of_batch&quot;</span><span class="p">:</span> <span class="n">type_of_batch</span><span class="p">,</span>
+            <span class="s2">&quot;batch_size&quot;</span><span class="p">:</span> <span class="n">batch_size</span><span class="p">,</span>
+            <span class="s2">&quot;costs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">costs</span><span class="p">,</span>
+            <span class="s2">&quot;restart&quot;</span><span class="p">:</span> <span class="n">restart</span><span class="p">,</span>
+            <span class="s2">&quot;test&quot;</span><span class="p">:</span> <span class="n">test</span><span class="p">,</span>
+            <span class="s2">&quot;max_cost&quot;</span><span class="p">:</span> <span class="n">max_cost</span>
+        <span class="p">}</span>
+
+        <span class="n">np</span><span class="o">.</span><span class="n">savez</span><span class="p">(</span><span class="n">path</span><span class="o">+</span><span class="s2">&quot;/MFSCBO_info.npz&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">info</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ScboMfOptimizer.initialize"><a class="viewcode-back" href="../../mfscbo/mfscbo_optimization.html#mfscbo.mfscbo_optimization.ScboMfOptimizer.initialize">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">added_X</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">added_Y</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">added_C</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the optimization by sampling initial points.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            added_X (List[torch.Tensor], optional): Additional points (normalized). </span>
+<span class="sd">                                              Defaults to None.</span>
+<span class="sd">            added_Y (List[torch.Tensor], optional): Additional objective values. </span>
+<span class="sd">                                              Defaults to None.</span>
+<span class="sd">            added_C (List[torch.Tensor], optional): Additional constraint values. </span>
+<span class="sd">                                              Defaults to None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">added_X</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">added_X</span><span class="p">]</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span> <span class="o">=</span> <span class="n">get_initial_points_mf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_pts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">added_Y</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span> <span class="o">=</span> <span class="p">[</span><span class="n">y</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">added_Y</span><span class="p">]</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">Y_fid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span><span class="p">[</span><span class="n">fid</span><span class="p">](</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="n">fid</span><span class="p">][:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Y_fid</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">added_C</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">added_C</span><span class="p">]</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">C_fid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="n">fid</span><span class="p">][:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">C_fid</span><span class="p">)</span></div>
+        
+
+<div class="viewcode-block" id="ScboMfOptimizer.optimize"><a class="viewcode-back" href="../../mfscbo/mfscbo_optimization.html#mfscbo.mfscbo_optimization.ScboMfOptimizer.optimize">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                 <span class="n">max_cost</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> 
+                 <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> 
+                 <span class="n">gp_parameters</span> <span class="o">=</span> <span class="p">{</span> <span class="s2">&quot;objective&quot;</span> <span class="p">:</span> <span class="p">{</span><span class="s2">&quot;noise_interval&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">),</span>
+                                                 <span class="s2">&quot;matern_nu&quot;</span><span class="p">:</span> <span class="mf">2.5</span><span class="p">,</span>
+                                                 <span class="s2">&quot;lengthscale_interval&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.005</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">)},</span>
+                                  <span class="s2">&quot;constraints&quot;</span> <span class="p">:</span> <span class="p">{</span><span class="s2">&quot;noise_interval&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">),</span>
+                                                 <span class="s2">&quot;matern_nu&quot;</span><span class="p">:</span> <span class="mf">2.5</span><span class="p">,</span>
+                                                 <span class="s2">&quot;lengthscale_interval&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.005</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">)},</span>
+                                                 <span class="s2">&quot;is_binary&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span>
+                 <span class="n">path</span> <span class="o">=</span> <span class="s2">&quot;MFSCBO&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Optimize the objective function using MF-SCBO.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            max_cost (int, optional): max cost = n_pts[0]*time_costs[0] + ... + n_pts[S]*time_costs[S]. Defaults to 100.</span>
+<span class="sd">            batch_size (int, optional): Batch size for the optimization. Defaults to 4.</span>
+<span class="sd">            gp_parameters (dict, optional): Dictionary containing the GP hyperparameters. If different parameters for the different constraints,</span>
+<span class="sd">                                            the dictionay should be of the form {&quot;objective&quot; : {...}, &quot;constraints&quot; : {0 : {...}, 1 :{...}, ..., n_constraints-1 : {...}}}.</span>
+<span class="sd">                                            Defaults to {&quot;objective&quot; : {&quot;noise_interval&quot;: (1e-6, 1e-3),</span>
+<span class="sd">                                                                        &quot;matern_nu&quot;: 2.5,</span>
+<span class="sd">                                                                        &quot;lengthscale_interval&quot;: (0.005, 4.0)},</span>
+<span class="sd">                                                        &quot;constraints&quot; : {&quot;noise_interval&quot;: (1e-6, 1e-3),</span>
+<span class="sd">                                                                        &quot;matern_nu&quot;: 2.5,  </span>
+<span class="sd">                                                                        &quot;lengthscale_interval&quot;: (0.005, 4.0)},</span>
+<span class="sd">                                                                        &quot;is_binary&quot;: False}.</span>
+<span class="sd">            path (str, optional): Path to save the results. Defaults to &quot;MFSCBO&quot;.</span>
+<span class="sd">            verbose (bool, optional): If True, print the optimization progress. Defaults to True.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            (torch.Tensor, torch.Tensor): The best X and Y values found during optimization.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_dir_and_log</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_print_optimization_parameters</span><span class="p">(</span><span class="n">max_cost</span><span class="o">=</span><span class="n">max_cost</span><span class="p">,</span> 
+                                          <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> 
+                                          <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> 
+                                          <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_print_parameters</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_info</span><span class="p">(</span><span class="n">type_of_centering</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span><span class="p">,</span>
+                       <span class="n">type_of_batch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_of_batch</span><span class="p">,</span>
+                    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                       <span class="n">max_cost</span><span class="o">=</span><span class="n">max_cost</span><span class="p">,</span>
+                       <span class="n">restart</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">restart</span><span class="p">,</span>
+                       <span class="n">test</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">test</span><span class="p">,</span>
+                       <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="n">noise_interval</span> <span class="o">=</span> <span class="n">gp_parameters</span><span class="p">[</span><span class="s2">&quot;objective&quot;</span><span class="p">][</span><span class="s2">&quot;noise_interval&quot;</span><span class="p">]</span>
+        <span class="n">martern_nu</span> <span class="o">=</span> <span class="n">gp_parameters</span><span class="p">[</span><span class="s2">&quot;objective&quot;</span><span class="p">][</span><span class="s2">&quot;matern_nu&quot;</span><span class="p">]</span>
+        <span class="n">lengthscale_interval</span> <span class="o">=</span> <span class="n">gp_parameters</span><span class="p">[</span><span class="s2">&quot;objective&quot;</span><span class="p">][</span><span class="s2">&quot;lengthscale_interval&quot;</span><span class="p">]</span>
+
+    
+        <span class="n">n_candidates</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="mi">200</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">))</span>
+        <span class="n">sobol</span> <span class="o">=</span> <span class="n">SobolEngine</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="n">scramble</span><span class="o">=</span><span class="kc">True</span><span class="p">,)</span>
+        
+        
+        <span class="n">state</span> <span class="o">=</span> <span class="n">ScboState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">update_state</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> 
+                             <span class="n">Y_next_hf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                             <span class="n">X_next_hf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                             <span class="n">C_next_hf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> 
+                             <span class="n">model_low</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="n">models_delta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="n">rhos</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="n">type_of_centering</span><span class="o">=</span><span class="s2">&quot;evaluated&quot;</span><span class="p">)</span> <span class="c1">#TODO</span>
+        
+
+      
+        <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_data</span><span class="p">(</span><span class="n">iteration</span><span class="o">=</span><span class="n">k</span><span class="p">,</span>
+                          <span class="n">trains_X</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">,</span>
+                          <span class="n">trains_Y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">,</span>
+                          <span class="n">trains_C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span>
+                          <span class="n">state_length</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">length</span><span class="p">,</span>
+                          <span class="n">state_best_xvalue</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">best_xvalue</span><span class="p">,</span>
+                          <span class="n">state_best_value</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">best_value</span><span class="p">,</span>
+                          <span class="n">state_best_constraint_values</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">best_constraint_values</span><span class="p">,</span>
+                          <span class="n">criterion</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nb_fidelities</span><span class="p">),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">),</span>
+                          <span class="n">model_low</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                          <span class="n">models_delta</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nb_iter</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_pts</span><span class="p">[</span><span class="n">fid</span><span class="p">])</span>
+        <span class="n">cost</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_pts</span><span class="p">)</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">costs</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cost_iter</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cost</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save</span><span class="p">(</span><span class="n">gps_info</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gps_info</span><span class="p">,</span>
+                  <span class="n">generated_X</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">generated_X</span><span class="p">,</span>
+                  <span class="n">generated_Y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">generated_Y</span><span class="p">,</span>
+                  <span class="n">generated_C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">generated_C</span><span class="p">,</span>
+                  <span class="n">criterions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">criterions</span><span class="p">,</span>
+                  <span class="n">trust_region_lengths</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trust_region_lengths</span><span class="p">,</span>
+                  <span class="n">best_X</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">best_X</span><span class="p">,</span>
+                  <span class="n">best_Y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">best_Y</span><span class="p">,</span>
+                  <span class="n">best_C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">best_C</span><span class="p">,</span>
+                  <span class="n">iterations</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">iterations</span><span class="p">,</span>
+                  <span class="n">nb_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_iter</span><span class="p">,</span>
+                  <span class="n">cost_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cost_iter</span><span class="p">,</span>
+                  <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="c1">#store high fidelity in case of type_of_centering = &quot;evaluated&quot;</span>
+        <span class="n">Y_high_inter</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+        <span class="n">X_high_inter</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+        <span class="n">C_high_inter</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+
+
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">state</span><span class="o">.</span><span class="n">restart_triggered</span> <span class="ow">and</span> <span class="p">(</span><span class="n">cost</span> <span class="o">&lt;</span> <span class="n">max_cost</span><span class="p">):</span>
+            <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">empty_cache</span><span class="p">()</span>
+
+
+            <span class="c1">##Fit of the multi-fidelity model</span>
+            <span class="n">model_low</span> <span class="o">=</span> <span class="n">get_fitted_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="mi">0</span><span class="p">][:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">noise_interval</span><span class="p">,</span> <span class="n">martern_nu</span><span class="p">,</span> <span class="n">lengthscale_interval</span><span class="p">)</span>
+
+            <span class="c1">##Create delta models</span>
+            <span class="n">models_delta</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="n">fid</span> <span class="o">!=</span> <span class="mi">0</span> <span class="p">:</span>
+                    <span class="n">X_fid_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="n">fid</span><span class="p">][:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">X_fid_im1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="n">fid</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">Y_fid_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span>
+                    <span class="n">Y_fid_im1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">[</span><span class="n">fid</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+
+                    <span class="c1">#get indices of X_fid_i that are not in X_fid_im1</span>
+                    <span class="n">mask_out_of_fid_i</span><span class="p">,</span> <span class="n">mask_in_of_fid_i</span><span class="p">,</span> <span class="n">mask_in_of_fid_im1</span> <span class="o">=</span> <span class="n">out_and_in</span><span class="p">(</span><span class="n">X_fid_i</span><span class="p">,</span> <span class="n">X_fid_im1</span><span class="p">)</span>
+
+                    <span class="c1">#get Y_fid_im1</span>
+                    <span class="n">Y_fid_im1_in_fid_i</span> <span class="o">=</span> <span class="n">Y_fid_im1</span><span class="p">[</span><span class="n">mask_in_of_fid_im1</span><span class="p">]</span>
+                    <span class="n">Y_fid_im1_out_fid_i_pred</span> <span class="o">=</span> <span class="n">mean_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="p">,</span> <span class="n">models_delta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhos</span><span class="p">,</span> <span class="n">X_fid_i</span><span class="p">[</span><span class="n">mask_out_of_fid_i</span><span class="p">],</span> <span class="n">fid</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="n">Y_fid_im1_out_fid_i_pred</span> <span class="o">=</span> <span class="n">Y_fid_im1_out_fid_i_pred</span><span class="p">[:,</span><span class="kc">None</span><span class="p">]</span>
+                   
+                    <span class="c1">#concatenate the two parts to get Y_fid_im1 as high fidelity points</span>
+                    <span class="n">virtual_Y_fid_im1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">Y_fid_im1_in_fid_i</span><span class="p">,</span> <span class="n">Y_fid_im1_out_fid_i_pred</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="n">virtual_X_fid_im1</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">X_fid_i</span><span class="p">[</span><span class="n">mask_in_of_fid_i</span><span class="p">],</span> <span class="n">X_fid_i</span><span class="p">[</span><span class="n">mask_out_of_fid_i</span><span class="p">]),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="n">Y_fid_i_ordered</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">Y_fid_i</span><span class="p">[</span><span class="n">mask_in_of_fid_i</span><span class="p">],</span> <span class="n">Y_fid_i</span><span class="p">[</span><span class="n">mask_out_of_fid_i</span><span class="p">]),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                    
+                    <span class="c1">#delta model fit</span>
+                    <span class="n">model_delta</span> <span class="o">=</span> <span class="n">DeltaGPModel</span><span class="p">(</span><span class="n">virtual_X_fid_im1</span><span class="p">,</span> <span class="c1">#all in X_fid_i points</span>
+                                               <span class="n">Y_fid_i_ordered</span><span class="p">,</span>
+                                               <span class="n">virtual_Y_fid_im1</span><span class="p">,</span>
+                                               <span class="n">covar_module</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">ScaleKernel</span><span class="p">(</span>
+                                                    <span class="n">gpytorch</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">MaternKernel</span><span class="p">(</span>
+                                                        <span class="n">nu</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span>
+                                                        <span class="n">ard_num_dims</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span>
+                                                        <span class="n">lengthscale_constraint</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">Interval</span><span class="p">(</span><span class="mf">0.005</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">),</span>
+                                                    <span class="p">)</span>
+                                                <span class="p">),</span>
+                                                <span class="n">likelihood</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">likelihoods</span><span class="o">.</span><span class="n">GaussianLikelihood</span><span class="p">(</span>
+                                                   <span class="n">noise_constraint</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">Interval</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">)</span>
+                                               <span class="p">),</span>
+                                               <span class="n">torchargs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span>
+                                               <span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+                    
+                    <span class="c1">#fit the model</span>
+                    <span class="n">fit_model_delta</span><span class="p">(</span><span class="n">model_delta</span><span class="p">,</span> <span class="n">virtual_X_fid_im1</span><span class="p">)</span>
+                  
+                    <span class="bp">self</span><span class="o">.</span><span class="n">rhos</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_delta</span><span class="o">.</span><span class="n">rho</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+                    <span class="n">models_delta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model_delta</span><span class="p">)</span> 
+                
+    
+            <span class="c1">#Fit of the constraints models</span>
+            <span class="n">gp_parameters_constraints</span> <span class="o">=</span> <span class="n">gp_parameters</span><span class="p">[</span><span class="s2">&quot;constraints&quot;</span><span class="p">]</span>
+            
+            <span class="k">if</span> <span class="mi">0</span> <span class="ow">in</span> <span class="n">gp_parameters_constraints</span> <span class="p">:</span> <span class="c1">#if 0 is a key then, different parameters for each constraint so use index i else use the same parameters for all constraints</span>
+                <span class="n">list_constraints_model</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_fitted_model</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:,</span> <span class="n">i</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">],</span> <span class="o">**</span><span class="n">gp_parameters_constraints</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+            <span class="k">else</span> <span class="p">:</span>
+                <span class="n">list_constraints_model</span> <span class="o">=</span> <span class="p">[</span><span class="n">get_fitted_model</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:,</span> <span class="n">i</span><span class="p">][:,</span> <span class="kc">None</span><span class="p">],</span> <span class="o">**</span><span class="n">gp_parameters_constraints</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+
+            <span class="k">with</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">max_cholesky_size</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)):</span>
+
+                <span class="n">X_next</span><span class="p">,</span> <span class="n">criterion</span> <span class="o">=</span> <span class="n">generate_batch_mf</span><span class="p">(</span>
+                    <span class="n">type_of_batch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_of_batch</span><span class="p">,</span>
+                    <span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span>
+                    <span class="n">model_lf</span><span class="o">=</span><span class="n">model_low</span><span class="p">,</span>
+                    <span class="n">models_delta</span><span class="o">=</span><span class="n">models_delta</span><span class="p">,</span>
+                    <span class="n">rhos</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rhos</span><span class="p">,</span>
+                    <span class="n">time_costs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">costs</span><span class="p">,</span>
+                    <span class="n">X_hf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">state</span><span class="o">.</span><span class="n">still_violated</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="c1">#if we are still violated, we consider all points as high fidelity because constraints are the same for all fidelities</span>
+                    <span class="n">Y_hf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">state</span><span class="o">.</span><span class="n">still_violated</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="c1">#if we are still violated, we consider all points as high fidelity because constraints are the same for all fidelities</span>
+                    <span class="n">C_hf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">state</span><span class="o">.</span><span class="n">still_violated</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="c1">#if we are still violated, we consider all points as high fidelity because constraints are the same for all fidelities</span>
+                    <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+                    <span class="n">n_candidates</span><span class="o">=</span><span class="n">n_candidates</span><span class="p">,</span>
+                    <span class="n">constraint_model</span><span class="o">=</span><span class="n">ModelListGP</span><span class="p">(</span><span class="o">*</span><span class="n">list_constraints_model</span><span class="p">),</span>
+                    <span class="n">sobol</span><span class="o">=</span><span class="n">sobol</span><span class="p">,</span>
+                    <span class="n">torchargs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span>
+                <span class="p">)</span>
+
+
+            <span class="c1">#count number fidelity points in the batch</span>
+            <span class="n">n_fid_points</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">n_fid_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">X_next</span><span class="p">[:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="n">fid</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+            <span class="c1">#for all points in X_next (where X_next[:,-1] is the fidelity associated) evaluate the given fidelity function</span>
+            <span class="c1"># Y_next should me same order as X_next</span>
+            <span class="n">Y_next</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">X_next</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">X_next</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">:</span>
+                <span class="n">fid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">X_next</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+                <span class="n">Y_next</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span><span class="p">[</span><span class="n">fid</span><span class="p">](</span><span class="n">X_next</span><span class="p">[</span><span class="n">i</span><span class="p">,:</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="kc">None</span><span class="p">,:])</span>
+            
+
+            <span class="c1">#constraints for all points in X_next</span>
+            <span class="n">C_next</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraints</span><span class="p">(</span><span class="n">X_next</span><span class="p">[:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="c1">#intermediate storage of high fidelity points and constraints</span>
+            <span class="n">Y_high_inter</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">Y_high_inter</span><span class="p">,</span> <span class="n">Y_next</span><span class="p">[</span><span class="n">X_next</span><span class="p">[:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">X_high_inter</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">X_high_inter</span><span class="p">,</span> <span class="n">X_next</span><span class="p">[</span><span class="n">X_next</span><span class="p">[:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="p">:]),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">C_high_inter</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">C_high_inter</span><span class="p">,</span> <span class="n">C_next</span><span class="p">[</span><span class="n">X_next</span><span class="p">[:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1">#update state</span>
+            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">still_violated</span> <span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning : infeasible, we update the state with all fidelity points because constraints are the same for all fidelities&quot;</span><span class="p">)</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">update_state</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> 
+                                     <span class="n">Y_next_hf</span><span class="o">=</span><span class="n">Y_next</span><span class="p">,</span>
+                                     <span class="n">X_next_hf</span><span class="o">=</span><span class="n">X_next</span><span class="p">[:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> 
+                                     <span class="n">C_next_hf</span><span class="o">=</span><span class="n">C_next</span><span class="p">,</span>
+                                     <span class="n">model_low</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                     <span class="n">models_delta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                     <span class="n">rhos</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                     <span class="n">type_of_centering</span><span class="o">=</span><span class="s2">&quot;evaluated&quot;</span><span class="p">)</span> <span class="c1">#TODO</span>
+            
+            <span class="k">else</span> <span class="p">:</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span> <span class="o">==</span> <span class="s2">&quot;evaluated&quot;</span> <span class="p">:</span> <span class="c1">#we update the state with evaluated high fidelity points</span>
+                    <span class="k">if</span> <span class="n">Y_high_inter</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">batch_size</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:</span> <span class="c1">#+1 because of the initial zero</span>
+                        <span class="n">state</span> <span class="o">=</span> <span class="n">update_state</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> 
+                                             <span class="n">Y_next_hf</span><span class="o">=</span><span class="n">Y_high_inter</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> 
+                                             <span class="n">X_next_hf</span><span class="o">=</span><span class="n">X_high_inter</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                             <span class="n">C_next_hf</span><span class="o">=</span><span class="n">C_high_inter</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+                                             <span class="n">model_low</span><span class="o">=</span><span class="n">model_low</span><span class="p">,</span>
+                                             <span class="n">models_delta</span><span class="o">=</span> <span class="n">models_delta</span><span class="p">,</span>
+                                             <span class="n">rhos</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rhos</span><span class="p">,</span>
+                                             <span class="n">type_of_centering</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span><span class="p">)</span>
+                        <span class="c1">#reset high fidelity storage</span>
+                        <span class="n">Y_high_inter</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+                        <span class="n">X_high_inter</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+                        <span class="n">C_high_inter</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span>
+                
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span> <span class="o">==</span> <span class="s2">&quot;predicted&quot;</span> <span class="p">:</span> <span class="c1">#we update the state with high fidelity predictions of the X_next points</span>
+                    <span class="n">Y_high_pred</span> <span class="o">=</span> <span class="n">mean_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="p">,</span> <span class="n">models_delta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhos</span><span class="p">,</span> <span class="n">X_next</span><span class="p">[:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">state</span> <span class="o">=</span> <span class="n">update_state</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span> 
+                                          <span class="n">Y_next_hf</span><span class="o">=</span><span class="n">Y_high_pred</span><span class="p">,</span> 
+                                          <span class="n">X_next_hf</span><span class="o">=</span><span class="n">X_next</span><span class="p">[:,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                          <span class="n">C_next_hf</span><span class="o">=</span><span class="n">C_next</span><span class="p">,</span> 
+                                          <span class="n">model_low</span><span class="o">=</span><span class="n">model_low</span><span class="p">,</span>
+                                          <span class="n">models_delta</span><span class="o">=</span><span class="n">models_delta</span><span class="p">,</span>
+                                          <span class="n">rhos</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rhos</span><span class="p">,</span>
+                                          <span class="n">type_of_centering</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span><span class="p">)</span>
+
+
+            <span class="c1"># concatenate the new points to the training data</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">X_next</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">:</span>
+                <span class="n">fid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">X_next</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">[</span><span class="n">fid</span><span class="p">],</span> <span class="n">X_next</span><span class="p">[</span><span class="n">i</span><span class="p">,:][</span><span class="kc">None</span><span class="p">,:]),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Y_next</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">:</span>
+                <span class="n">fid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">X_next</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">[</span><span class="n">fid</span><span class="p">],</span> <span class="n">Y_next</span><span class="p">[</span><span class="n">i</span><span class="p">,:][</span><span class="kc">None</span><span class="p">,:]),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">C_next</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="p">:</span>
+                <span class="n">fid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">X_next</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">[</span><span class="n">fid</span><span class="p">],</span> <span class="n">C_next</span><span class="p">[</span><span class="n">i</span><span class="p">,:][</span><span class="kc">None</span><span class="p">,:]),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+   
+            <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">test</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_of_centering</span> <span class="o">==</span> <span class="s2">&quot;predicted&quot;</span> <span class="p">:</span>
+                <span class="n">state_best_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_objectives</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">](</span><span class="n">state</span><span class="o">.</span><span class="n">best_xvalue</span><span class="p">[</span><span class="kc">None</span><span class="p">,:])</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="k">else</span> <span class="p">:</span>
+                <span class="n">state_best_value</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">best_value</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_data</span><span class="p">(</span><span class="n">iteration</span><span class="o">=</span><span class="n">k</span><span class="p">,</span>
+                             <span class="n">trains_X</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_X</span><span class="p">,</span>
+                             <span class="n">trains_Y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trains_Y</span><span class="p">,</span>
+                             <span class="n">trains_C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">C</span><span class="p">,</span>
+                             <span class="n">state_length</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">length</span><span class="p">,</span>
+                             <span class="n">state_best_xvalue</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">best_xvalue</span><span class="p">,</span>
+                             <span class="n">state_best_value</span><span class="o">=</span><span class="n">state_best_value</span><span class="p">,</span>
+                             <span class="n">state_best_constraint_values</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">best_constraint_values</span><span class="p">,</span>
+                             <span class="n">criterion</span><span class="o">=</span><span class="n">criterion</span><span class="p">,</span>
+                             <span class="n">model_low</span><span class="o">=</span><span class="n">model_low</span><span class="p">,</span>
+                             <span class="n">models_delta</span><span class="o">=</span><span class="n">models_delta</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nb_iter</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n_fid_points</span><span class="p">[</span><span class="n">fid</span><span class="p">])</span>
+            
+            <span class="n">cost</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+                <span class="n">cost</span> <span class="o">+=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_iter</span><span class="p">[</span><span class="n">fid</span><span class="p">]))</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">costs</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cost_iter</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cost</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_print_iteration</span><span class="p">(</span><span class="n">iteration</span><span class="o">=</span><span class="n">k</span><span class="p">,</span>
+                                 <span class="n">current_cost</span><span class="o">=</span><span class="nb">sum</span><span class="p">([</span><span class="n">n_fid_points</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">costs</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span> <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span><span class="p">]),</span>
+                                 <span class="n">current_total_cost</span><span class="o">=</span><span class="n">cost</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+                                 <span class="n">max_cost</span><span class="o">=</span><span class="n">max_cost</span><span class="p">,</span>
+                                 <span class="n">current_best_x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">best_X</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span>
+                                 <span class="n">current_best_y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">best_Y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                 <span class="n">length_tr</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">length</span><span class="p">,</span>
+                                 <span class="n">is_feasible</span><span class="o">=</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">best_constraint_values</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+                                 <span class="n">smallest_total_violation</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">best_constraint_values</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+                                 <span class="n">generated_X</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">generated_X</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span>
+                                 <span class="n">generated_Y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">generated_Y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span>
+                                 <span class="n">criterion</span><span class="o">=</span><span class="n">criterion</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">(),</span>
+                                 <span class="n">generated_fidelities</span><span class="o">=</span><span class="n">n_fid_points</span><span class="p">,</span>
+                                 <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+   
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fidelities</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="n">fid</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_print_gp_parameters</span><span class="p">(</span><span class="n">model</span> <span class="o">=</span> <span class="n">model_low</span><span class="p">,</span> 
+                                             <span class="n">fidelity</span><span class="o">=</span><span class="n">fid</span><span class="p">,</span> 
+                                             <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+                <span class="k">else</span> <span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_print_gp_parameters</span><span class="p">(</span><span class="n">model</span> <span class="o">=</span> <span class="n">models_delta</span><span class="p">[</span><span class="n">fid</span><span class="p">],</span> 
+                                             <span class="n">fidelity</span><span class="o">=</span><span class="n">fid</span><span class="p">,</span> 
+                                             <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save</span><span class="p">(</span><span class="n">gps_info</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gps_info</span><span class="p">,</span>
+                      <span class="n">generated_X</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">generated_X</span><span class="p">,</span>
+                      <span class="n">generated_Y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">generated_Y</span><span class="p">,</span>
+                      <span class="n">generated_C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">generated_C</span><span class="p">,</span>
+                      <span class="n">criterions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">criterions</span><span class="p">,</span>
+                      <span class="n">trust_region_lengths</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trust_region_lengths</span><span class="p">,</span>
+                      <span class="n">best_X</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">best_X</span><span class="p">,</span>
+                      <span class="n">best_Y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">best_Y</span><span class="p">,</span>
+                      <span class="n">best_C</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">best_C</span><span class="p">,</span>
+                      <span class="n">iterations</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">iterations</span><span class="p">,</span>
+                      <span class="n">nb_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nb_iter</span><span class="p">,</span>
+                      <span class="n">cost_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cost_iter</span><span class="p">,</span>
+                      <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+                    
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">restart</span> <span class="ow">and</span> <span class="n">state</span><span class="o">.</span><span class="n">restart_triggered</span> <span class="p">:</span>
+                <span class="n">state</span><span class="o">.</span><span class="n">restart_triggered</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">state</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="mf">0.8</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_close_log</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_X</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_Y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Lucas Palazzolo.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

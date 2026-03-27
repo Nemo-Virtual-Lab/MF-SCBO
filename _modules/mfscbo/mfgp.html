@@ -1,0 +1,372 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mfscbo.mfgp &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=525cde36"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mfscbo.mfgp</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mfscbo.mfgp</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">gpytorch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">gpytorch.mlls</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExactMarginalLogLikelihood</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">botorch.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">SingleTaskGP</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">botorch.fit</span><span class="w"> </span><span class="kn">import</span> <span class="n">fit_gpytorch_mll</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">botorch.models.transforms.outcome</span><span class="w"> </span><span class="kn">import</span> <span class="n">Standardize</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">botorch.optim.fit</span><span class="w"> </span><span class="kn">import</span> <span class="n">fit_gpytorch_mll_scipy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">gpytorch.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">ApproximateGP</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">gpytorch.variational</span><span class="w"> </span><span class="kn">import</span> <span class="n">VariationalStrategy</span><span class="p">,</span> <span class="n">CholeskyVariationalDistribution</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">botorch.models.gpytorch</span><span class="w"> </span><span class="kn">import</span> <span class="n">GPyTorchModel</span>
+
+
+
+<div class="viewcode-block" id="DeltaGPModel"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.DeltaGPModel">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">DeltaGPModel</span><span class="p">(</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ExactGP</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;GP model for the delta function in multi-fidelity optimization (in order to learn rho).&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_fid_i</span><span class="p">,</span> <span class="n">Y_fid_i</span><span class="p">,</span> <span class="n">Y_fid_im1</span><span class="p">,</span> <span class="n">covar_module</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">,</span> <span class="n">torchargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the DeltaGPModel.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            X_fid_i (torch.Tensor): Input points at fidelity i of shape (n_i, dim)</span>
+<span class="sd">            Y_fid_i (torch.Tensor): Output points at fidelity i of shape (n_i, 1)</span>
+<span class="sd">            Y_fid_im1 (torch.Tensor): Output points at fidelity i-1 of shape (n_im1, 1)</span>
+<span class="sd">            covar_module (gpytorch.kernels.Kernel): Covariance module for the GP model</span>
+<span class="sd">            likelihood (gpytorch.likelihoods.Likelihood): Likelihood for the GP model</span>
+<span class="sd">            torchargs (dict): Dictionary containing the device on which the tensors will be stored</span>
+<span class="sd">                                and the dtype (device : str, dtype : torch.dtype)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">X_fid_i</span><span class="p">,</span> <span class="n">Y_fid_i</span><span class="p">,</span> <span class="n">likelihood</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">Y_fid_im1</span> <span class="o">=</span> <span class="n">Y_fid_im1</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Y_fid_i</span> <span class="o">=</span> <span class="n">Y_fid_i</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span> <span class="o">=</span> <span class="n">likelihood</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span> <span class="o">=</span> <span class="n">torchargs</span>
+
+        <span class="c1"># rho </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw_rho</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">**</span><span class="n">torchargs</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_parameter</span><span class="p">(</span><span class="s2">&quot;raw_rho&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_rho</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_constraint</span><span class="p">(</span><span class="s2">&quot;raw_rho&quot;</span><span class="p">,</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">Interval</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">))</span>
+
+  
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_module</span> <span class="o">=</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">means</span><span class="o">.</span><span class="n">ConstantMean</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="o">**</span><span class="n">torchargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covar_module</span> <span class="o">=</span> <span class="n">covar_module</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="o">**</span><span class="n">torchargs</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rho</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the current value of rho.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_rho_constraint</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw_rho</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DeltaGPModel.forward"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.DeltaGPModel.forward">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the GP output at points x.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            x (torch.Tensor): Input points of shape (n_pts, dim)</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            gpytorch.distributions.MultivariateNormal: GP output distribution</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">delta_mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_module</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">delta_covar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covar_module</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">MultivariateNormal</span><span class="p">(</span><span class="n">delta_mean</span><span class="p">,</span> <span class="n">delta_covar</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DeltaGPModel.delta_targets"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.DeltaGPModel.delta_targets">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">delta_targets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the delta targets for training, i.e., Y_fid_i - rho * Y_fid_im1.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            torch.Tensor: Delta targets of shape (n_i, 1)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_fid_i</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y_fid_im1</span></div>
+
+<div class="viewcode-block" id="DeltaGPModel.posterior"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.DeltaGPModel.posterior">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">posterior</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_new</span><span class="p">,</span> <span class="n">likelihood</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the posterior predictive distribution at X_new.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            X_new (torch.Tensor): New input points of shape (n_new_pts, dim)</span>
+<span class="sd">            likelihood (bool, optional): If True, returns the posterior through the likelihood (including observation noise).</span>
+<span class="sd">                                          If False, returns the latent function posterior. Defaults to True.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            gpytorch.distributions.MultivariateNormal: Posterior predictive distribution</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">likelihood</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">(),</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">fast_pred_var</span><span class="p">():</span>
+            <span class="n">mvn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">X_new</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">likelihood</span><span class="p">:</span>
+                <span class="n">mvn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span><span class="p">(</span><span class="n">mvn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mvn</span></div></div>
+
+<div class="viewcode-block" id="mean_of_fidelity_i"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.mean_of_fidelity_i">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">mean_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="p">,</span> <span class="n">models_delta</span><span class="p">,</span> <span class="n">rhos</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">fid</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the mean of the fidelity i function at points X.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model_low (botorch.models.SingleTaskGP): Low fidelity GP model</span>
+<span class="sd">        models_delta (List[botorch.models.SingleTaskGP]): List of delta GP models for each fidelity : [None, delta_1, delta_2, ..., delta_i]</span>
+<span class="sd">        rhos (List[float]): List of rho values for each fidelity : [1, rho_1, rho_2, ..., rho_i]</span>
+<span class="sd">        X (torch.Tensor): Input points of shape (n_pts, dim)</span>
+<span class="sd">        fid (int): Fidelity level (0 for low fidelity, S for high fidelity)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        torch.Tensor: Mean predictions of shape (n_pts)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">fid</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>
+        <span class="k">return</span> <span class="n">model_low</span><span class="o">.</span><span class="n">posterior</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span> <span class="p">:</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">model_low</span><span class="o">.</span><span class="n">posterior</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">fid</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">rho_i</span> <span class="o">=</span> <span class="n">rhos</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">model_delta_i</span> <span class="o">=</span> <span class="n">models_delta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">mean_delta_i</span> <span class="o">=</span> <span class="n">model_delta_i</span><span class="o">.</span><span class="n">posterior</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">mean</span> <span class="o">=</span> <span class="n">rho_i</span> <span class="o">*</span> <span class="n">mean</span> <span class="o">+</span> <span class="n">mean_delta_i</span>
+        <span class="k">return</span> <span class="n">mean</span></div>
+
+<div class="viewcode-block" id="samples_of_fidelity_i"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.samples_of_fidelity_i">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">samples_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="p">,</span> <span class="n">models_delta</span><span class="p">,</span> <span class="n">rhos</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">fid</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute samples of the fidelity i function at points X.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model_low (botorch.models.SingleTaskGP): Low fidelity GP model</span>
+<span class="sd">        models_delta (List[botorch.models.SingleTaskGP]): List of delta GP models for each fidelity : [None, delta_1, delta_2, ..., delta_i]</span>
+<span class="sd">        rhos (List[float]): List of rho values for each fidelity : [1, rho_1, rho_2, ..., rho_i]</span>
+<span class="sd">        X (torch.Tensor): Input points of shape (n_pts, dim)</span>
+<span class="sd">        fid (int): Fidelity level (0 for low fidelity, S for high fidelity)</span>
+<span class="sd">        n_samples (int): Number of samples to draw</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        torch.Tensor: Sampled predictions of shape (n_samples, n_pts)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">fid</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>
+        <span class="k">return</span> <span class="n">model_low</span><span class="o">.</span><span class="n">posterior</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">rsample</span><span class="p">(</span><span class="n">sample_shape</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">([</span><span class="n">n_samples</span><span class="p">]))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span> <span class="p">:</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">model_low</span><span class="o">.</span><span class="n">posterior</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">rsample</span><span class="p">(</span><span class="n">sample_shape</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">([</span><span class="n">n_samples</span><span class="p">]))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">fid</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">rho_i</span> <span class="o">=</span> <span class="n">rhos</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">model_delta_i</span> <span class="o">=</span> <span class="n">models_delta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">delta_i_samples</span> <span class="o">=</span> <span class="n">model_delta_i</span><span class="o">.</span><span class="n">posterior</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">rsample</span><span class="p">(</span><span class="n">sample_shape</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">Size</span><span class="p">([</span><span class="n">n_samples</span><span class="p">]))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="n">rho_i</span> <span class="o">*</span> <span class="n">samples</span> <span class="o">+</span> <span class="n">delta_i_samples</span>
+        <span class="k">return</span> <span class="n">samples</span></div>
+
+<div class="viewcode-block" id="get_fitted_model"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.get_fitted_model">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_fitted_model</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">noise_interval</span><span class="p">,</span> <span class="n">matern_nu</span><span class="p">,</span> <span class="n">lengthscale_interval</span><span class="p">,</span> <span class="n">is_binary</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit a GP model to data (X, Y).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        X (torch.Tensor): Input data of shape (n_pts, dim)</span>
+<span class="sd">        Y (torch.Tensor): Output data of shape (n_pts, 1)</span>
+<span class="sd">        noise_interval (Tuple[float, float]): Interval for the noise variance hyperparameter (min, max)</span>
+<span class="sd">        matern_nu (float): Smoothness parameter for the Matern kernel (e.g., 0.5 for Matern-1/2, 1.5 for Matern-3/2, 2.5 for Matern-5/2)</span>
+<span class="sd">        lengthscale_interval (Tuple[float, float]): Interval for the lengthscale hyperparameters (min, max)</span>
+<span class="sd">        is_binary (bool, optional): If True, use a binary likelihood. Defaults to False.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        botorch.models.SingleTaskGP: Fitted GP model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">is_binary</span> <span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Binary_GPModel</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span>
+            <span class="n">Y</span><span class="p">,</span>
+            <span class="n">covar_module</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">scale_kernel</span><span class="o">.</span><span class="n">ScaleKernel</span><span class="p">(</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">RBFKernel</span><span class="p">()),</span>
+        <span class="p">)</span>
+        <span class="n">mll</span> <span class="o">=</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">mlls</span><span class="o">.</span><span class="n">VariationalELBO</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">likelihood</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">num_data</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">double</span><span class="p">()</span>
+        <span class="n">mll</span><span class="o">.</span><span class="n">double</span><span class="p">()</span>
+
+    <span class="k">else</span> <span class="p">:</span> 
+        <span class="n">model</span> <span class="o">=</span> <span class="n">SingleTaskGP</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span>
+            <span class="n">Y</span><span class="p">,</span>
+            <span class="n">covar_module</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">ScaleKernel</span><span class="p">(</span>
+                <span class="n">gpytorch</span><span class="o">.</span><span class="n">kernels</span><span class="o">.</span><span class="n">MaternKernel</span><span class="p">(</span>
+                    <span class="n">nu</span><span class="o">=</span><span class="n">matern_nu</span><span class="p">,</span>
+                    <span class="n">ard_num_dims</span><span class="o">=</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="n">lengthscale_constraint</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">Interval</span><span class="p">(</span><span class="o">*</span><span class="n">lengthscale_interval</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">),</span>
+            <span class="n">likelihood</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">likelihoods</span><span class="o">.</span><span class="n">GaussianLikelihood</span><span class="p">(</span>
+                <span class="n">noise_constraint</span><span class="o">=</span><span class="n">gpytorch</span><span class="o">.</span><span class="n">constraints</span><span class="o">.</span><span class="n">Interval</span><span class="p">(</span><span class="o">*</span><span class="n">noise_interval</span><span class="p">)</span>
+            <span class="p">),</span>
+            <span class="n">outcome_transform</span><span class="o">=</span><span class="n">Standardize</span><span class="p">(</span><span class="n">m</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">mll</span> <span class="o">=</span> <span class="n">ExactMarginalLogLikelihood</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">likelihood</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">max_cholesky_size</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)):</span>
+        <span class="n">fit_gpytorch_mll</span><span class="p">(</span><span class="n">mll</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">model</span></div>
+
+<div class="viewcode-block" id="fit_model_delta"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.fit_model_delta">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">fit_model_delta</span><span class="p">(</span><span class="n">model_delta</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span> <span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit the delta GP model by optimizing the marginal log likelihood with fit_gpytorch_mll_scipy to ensure constraints.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        model_delta (DeltaGPModel): Delta GP model to fit</span>
+<span class="sd">        X (torch.Tensor): Input data of shape (n_pts, dim)</span>
+<span class="sd">    &quot;&quot;&quot;</span> 
+    <span class="c1"># Marginal log likelihood</span>
+    <span class="n">mll</span> <span class="o">=</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">mlls</span><span class="o">.</span><span class="n">ExactMarginalLogLikelihood</span><span class="p">(</span>
+        <span class="n">model_delta</span><span class="o">.</span><span class="n">likelihood</span><span class="p">,</span>
+        <span class="n">model_delta</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Prepare model for training </span>
+    <span class="n">model_delta</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+    <span class="n">model_delta</span><span class="o">.</span><span class="n">likelihood</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">mll_closure</span><span class="p">():</span>
+        <span class="c1"># clear previous grads because : </span>
+        <span class="c1"># call 1 : p.grad = grad1</span>
+        <span class="c1"># call 2 : p.grad = grad1 + grad2</span>
+        <span class="c1"># ...</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">mll</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">p</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+
+        <span class="c1"># recompute delta targets (rho changes)</span>
+        <span class="n">delta_Y</span> <span class="o">=</span> <span class="n">model_delta</span><span class="o">.</span><span class="n">delta_targets</span><span class="p">()</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+        <span class="c1"># loss</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">model_delta</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="o">-</span><span class="n">mll</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">delta_Y</span><span class="p">)</span>
+
+        <span class="c1"># compute gradients</span>
+        <span class="n">grad_tensors</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span>
+            <span class="n">loss</span><span class="p">,</span>
+            <span class="nb">tuple</span><span class="p">(</span><span class="n">mll</span><span class="o">.</span><span class="n">parameters</span><span class="p">()),</span>
+            <span class="n">allow_unused</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1">#return None for parameters that do not affect the loss</span>
+            <span class="n">retain_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">create_graph</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">loss</span><span class="p">,</span> <span class="n">grad_tensors</span>
+    
+    <span class="c1">#scipy constrained optimization</span>
+    <span class="n">fit_gpytorch_mll_scipy</span><span class="p">(</span>
+        <span class="n">mll</span><span class="p">,</span>
+        <span class="n">closure</span><span class="o">=</span><span class="n">mll_closure</span><span class="p">,</span>
+        <span class="n">method</span><span class="o">=</span><span class="s2">&quot;L-BFGS-B&quot;</span><span class="p">,</span>      <span class="c1"># uses bounds automatically</span>
+        <span class="n">options</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;disp&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Binary_GPModel"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.Binary_GPModel">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Binary_GPModel</span><span class="p">(</span><span class="n">ApproximateGP</span><span class="p">,</span><span class="n">GPyTorchModel</span><span class="p">)</span> <span class="p">:</span> <span class="c1">#from https://botorch.org/docs/notebooks_community/clf_constrained_bo/</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;GP model for binary classification in constrained Bayesian optimization.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">covar_module</span><span class="p">)</span> <span class="p">:</span> 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the Binary_GPModel.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            X (torch.Tensor): Input data of shape (n_pts, dim)</span>
+<span class="sd">            Y (torch.Tensor): Binary output data of shape (n_pts, 1) with values in {0, 1}</span>
+<span class="sd">            covar_module (gpytorch.kernels.Kernel): Covariance module for the GP model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">assert</span> <span class="n">Y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Y must be of shape [batch_size, 1], but got </span><span class="si">{</span><span class="n">Y</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_inputs</span> <span class="o">=</span> <span class="p">(</span><span class="n">X</span><span class="p">,)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_targets</span> <span class="o">=</span> <span class="n">Y</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> 
+
+        <span class="n">variational_distribution</span> <span class="o">=</span> <span class="n">CholeskyVariationalDistribution</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="n">variational_strategy</span> <span class="o">=</span> <span class="n">VariationalStrategy</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">variational_distribution</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Binary_GPModel</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">variational_strategy</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_module</span> <span class="o">=</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">means</span><span class="o">.</span><span class="n">ConstantMean</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covar_module</span> <span class="o">=</span> <span class="n">covar_module</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span> <span class="o">=</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">likelihoods</span><span class="o">.</span><span class="n">BernoulliLikelihood</span><span class="p">()</span>
+    
+<div class="viewcode-block" id="Binary_GPModel.forward"><a class="viewcode-back" href="../../mfscbo/mfgp.html#mfscbo.mfgp.Binary_GPModel.forward">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="p">:</span>
+        <span class="n">mean_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_module</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">covar_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covar_module</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gpytorch</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">MultivariateNormal</span><span class="p">(</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">covar_x</span><span class="p">)</span></div></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Lucas Palazzolo.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

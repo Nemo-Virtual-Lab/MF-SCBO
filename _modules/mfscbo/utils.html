@@ -1,0 +1,193 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mfscbo.utils &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=525cde36"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mfscbo.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mfscbo.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">botorch.utils.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">unnormalize</span>
+
+<span class="n">COLORS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;#6aab5d&quot;</span><span class="p">,</span> <span class="s2">&quot;#635edf&quot;</span><span class="p">,</span> <span class="s2">&quot;#d96260&quot;</span><span class="p">,</span><span class="s2">&quot;#efc266&quot;</span><span class="p">]</span>
+<span class="n">MARKERS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="s1">&#39;^&#39;</span><span class="p">,</span> <span class="s1">&#39;v&#39;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="Print_log_and_console"><a class="viewcode-back" href="../../mfscbo/utils.html#mfscbo.utils.Print_log_and_console">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Print_log_and_console</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class to print both in a file and in the console.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">files</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the class with the given files.</span>
+<span class="sd">            Args:</span>
+<span class="sd">                files: File objects where to write the output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="n">files</span>
+<div class="viewcode-block" id="Print_log_and_console.write"><a class="viewcode-back" href="../../mfscbo/utils.html#mfscbo.utils.Print_log_and_console.write">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span></div>
+<div class="viewcode-block" id="Print_log_and_console.flush"><a class="viewcode-back" href="../../mfscbo/utils.html#mfscbo.utils.Print_log_and_console.flush">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+<div class="viewcode-block" id="Print_log_and_console.close"><a class="viewcode-back" href="../../mfscbo/utils.html#mfscbo.utils.Print_log_and_console.close">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1">#close files except stdout and stderr</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">f</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">__stdout__</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">__stderr__</span><span class="p">):</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div></div>
+
+<div class="viewcode-block" id="eval_fun_unnormalized"><a class="viewcode-back" href="../../mfscbo/utils.html#mfscbo.utils.eval_fun_unnormalized">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">eval_fun_unnormalized</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fun</span><span class="p">,</span> <span class="n">bounds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Evaluate a function on normalized points.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x (torch.Tensor): Points to evaluate of shape (n_pts, dim)</span>
+<span class="sd">        fun (callable): Function to evaluate</span>
+<span class="sd">        bounds (torch.Tensor): Bounds of shape (2, dim)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        torch.Tensor : Evaluated de-normalized points</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">fun</span><span class="p">(</span><span class="n">unnormalize</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">bounds</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="get_gp_info"><a class="viewcode-back" href="../../mfscbo/utils.html#mfscbo.utils.get_gp_info">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_gp_info</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">fidelity</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get information about the GP model.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        model (botorch.models.SingleTaskGP or DeltaGPModel): GP model</span>
+<span class="sd">        fidelity (int): Fidelity level of the model</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: Dictionary containing GP information : &quot;length_scale&quot;, &quot;length_scale_bounds&quot;, &quot;noise&quot;, &quot;noise_bounds&quot;, &quot;rho&quot;, &quot;rho_bounds&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">noise</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">likelihood</span><span class="o">.</span><span class="n">noise</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+    <span class="n">length_scale</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">covar_module</span><span class="o">.</span><span class="n">base_kernel</span><span class="o">.</span><span class="n">lengthscale</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+    <span class="n">length_scale</span> <span class="o">=</span> <span class="n">length_scale</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+    <span class="n">length_scale</span> <span class="o">=</span> <span class="s2">&quot;[&quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ls</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">ls</span> <span class="ow">in</span> <span class="n">length_scale</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span> <span class="o">+</span> <span class="s2">&quot;]&quot;</span>
+    
+    <span class="n">length_scale_bounds</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">covar_module</span><span class="o">.</span><span class="n">base_kernel</span><span class="o">.</span><span class="n">raw_lengthscale_constraint</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">covar_module</span><span class="o">.</span><span class="n">base_kernel</span><span class="o">.</span><span class="n">raw_lengthscale_constraint</span><span class="o">.</span><span class="n">upper_bound</span>
+    <span class="n">length_scale_bounds</span> <span class="o">=</span> <span class="p">(</span><span class="n">length_scale_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">length_scale_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+    <span class="n">noise_bounds</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">likelihood</span><span class="o">.</span><span class="n">noise_covar</span><span class="o">.</span><span class="n">raw_noise_constraint</span>
+    <span class="n">noise_bounds</span> <span class="o">=</span> <span class="p">(</span><span class="n">noise_bounds</span><span class="o">.</span><span class="n">lower_bound</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">noise_bounds</span><span class="o">.</span><span class="n">upper_bound</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="n">fidelity</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>
+        <span class="n">rho</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">rho_bounds</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span> <span class="p">:</span> 
+        <span class="n">rho</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">rho</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">rho_bounds</span> <span class="o">=</span> <span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">raw_rho_constraint</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">raw_rho_constraint</span><span class="o">.</span><span class="n">upper_bound</span><span class="p">)</span>
+        <span class="n">rho_bounds</span> <span class="o">=</span> <span class="p">(</span><span class="n">rho_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">rho_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+    <span class="n">gp_info</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;length_scale&quot;</span><span class="p">:</span> <span class="n">length_scale</span><span class="p">,</span>
+        <span class="s2">&quot;length_scale_bounds&quot;</span><span class="p">:</span> <span class="n">length_scale_bounds</span><span class="p">,</span>
+        <span class="s2">&quot;noise&quot;</span><span class="p">:</span> <span class="n">noise</span><span class="p">,</span>
+        <span class="s2">&quot;noise_bounds&quot;</span><span class="p">:</span> <span class="n">noise_bounds</span><span class="p">,</span>
+        <span class="s2">&quot;rho&quot;</span><span class="p">:</span> <span class="n">rho</span><span class="p">,</span>
+        <span class="s2">&quot;rho_bounds&quot;</span><span class="p">:</span> <span class="n">rho_bounds</span>
+    <span class="p">}</span>   
+
+    <span class="k">return</span> <span class="n">gp_info</span></div>
+
+
+<div class="viewcode-block" id="ensure_list"><a class="viewcode-back" href="../../mfscbo/utils.html#mfscbo.utils.ensure_list">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">ensure_list</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">default</span><span class="p">,</span> <span class="n">num_fidelities</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Ensure that the input value is a list of length num_fidelities.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        val (any or list or tuple): Input value.</span>
+<span class="sd">        default (any): Default value to use if val is None.</span>
+<span class="sd">        num_fidelities (int): Number of fidelities.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        list: List of length num_fidelities.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">default</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">val</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span>
+    <span class="k">return</span> <span class="n">val</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Lucas Palazzolo.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

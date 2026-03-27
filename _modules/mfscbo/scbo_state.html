@@ -1,0 +1,254 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mfscbo.scbo_state &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=525cde36"></script>
+      <script src="../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">mfscbo.scbo_state</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for mfscbo.scbo_state</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mfscbo.mfgp</span><span class="w"> </span><span class="kn">import</span> <span class="n">mean_of_fidelity_i</span>
+
+
+<span class="c1">## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+<span class="c1"># Original code from BoTorch : https://botorch.org/docs/tutorials/scalable_constrained_bo/</span>
+<span class="c1"># Some modifications have been made to adapt the code to  our needs.</span>
+<span class="c1">## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
+
+
+<div class="viewcode-block" id="ScboState"><a class="viewcode-back" href="../../mfscbo/scbo_state.html#mfscbo.scbo_state.ScboState">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ScboState</span><span class="p">:</span>
+    <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">num_constraints</span><span class="p">:</span> <span class="nb">int</span> 
+    <span class="n">torchargs</span><span class="p">:</span> <span class="nb">dict</span>
+    <span class="n">length</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.8</span>
+    <span class="n">length_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">**</span><span class="mi">7</span>
+    <span class="n">length_max</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.6</span>
+    <span class="n">failure_counter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">failure_tolerance</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>  <span class="c1"># Note: Post-initialized</span>
+    <span class="n">success_counter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">success_tolerance</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># original TuRBO value</span>
+    <span class="n">best_value</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+    <span class="n">best_xvalue</span><span class="p">:</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Note : Post-initialized</span>
+    <span class="n">best_constraint_values</span><span class="p">:</span> <span class="n">Tensor</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># Note : Post-initialized</span>
+    <span class="n">best_ind</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">still_violated</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">restart_triggered</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; State class for SCBO optimization. &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">failure_tolerance</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">max</span><span class="p">([</span><span class="mf">4.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_constraint_values</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_constraints</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">torchargs</span><span class="p">)</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">inf</span></div>
+
+<div class="viewcode-block" id="update_tr_length"><a class="viewcode-back" href="../../mfscbo/scbo_state.html#mfscbo.scbo_state.update_tr_length">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">update_tr_length</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">ScboState</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Update the trust region length according to the success and failure counters.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        state (ScboState): Current state of the optimization</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        ScboState: Updated state of the optimization</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Update the length of the trust region according to</span>
+    <span class="c1"># success and failure counters</span>
+    <span class="c1"># (Just as in original TuRBO paper)</span>
+    <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">success_counter</span> <span class="o">==</span> <span class="n">state</span><span class="o">.</span><span class="n">success_tolerance</span><span class="p">:</span>  <span class="c1"># Expand trust region</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">state</span><span class="o">.</span><span class="n">length</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">length_max</span><span class="p">)</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">success_counter</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">elif</span> <span class="n">state</span><span class="o">.</span><span class="n">failure_counter</span> <span class="o">==</span> <span class="n">state</span><span class="o">.</span><span class="n">failure_tolerance</span><span class="p">:</span>  <span class="c1"># Shrink trust region</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">length</span> <span class="o">/=</span> <span class="mf">2.0</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">failure_counter</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">length</span> <span class="o">&lt;</span> <span class="n">state</span><span class="o">.</span><span class="n">length_min</span><span class="p">:</span>  <span class="c1"># Restart when trust region becomes too small</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">restart_triggered</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">return</span> <span class="n">state</span></div>
+
+<div class="viewcode-block" id="get_best_index_for_batch"><a class="viewcode-back" href="../../mfscbo/scbo_state.html#mfscbo.scbo_state.get_best_index_for_batch">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_best_index_for_batch</span><span class="p">(</span><span class="n">Y</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">C</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the index for the best point.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        Y (torch.Tensor): Objective values of shape (n_pts, 1)</span>
+<span class="sd">        C (torch.Tensor): Constraint values of shape (n_pts, n_constraints)</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        int: Index of the best point in the batch</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">is_feas</span> <span class="o">=</span> <span class="p">(</span><span class="n">C</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">is_feas</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>  <span class="c1"># Choose best feasible candidate</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="n">Y</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">score</span><span class="p">[</span><span class="o">~</span><span class="n">is_feas</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">score</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">C</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="update_state"><a class="viewcode-back" href="../../mfscbo/scbo_state.html#mfscbo.scbo_state.update_state">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">update_state</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> 
+                 <span class="n">Y_next_hf</span><span class="p">,</span> 
+                 <span class="n">X_next_hf</span><span class="p">,</span> 
+                 <span class="n">C_next_hf</span><span class="p">,</span> 
+                 <span class="n">model_low</span><span class="p">,</span> 
+                 <span class="n">models_delta</span><span class="p">,</span> 
+                 <span class="n">rhos</span><span class="p">,</span> 
+                 <span class="n">type_of_centering</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot; Update the state of the optimization.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        state (ScboState): Current state of the optimization</span>
+<span class="sd">        Y_next_hf (torch.Tensor): New objective high fidelity values of shape (n_pts, 1)</span>
+<span class="sd">        X_next_hf (torch.Tensor): New high fidelity points of shape (n_pts, dim)</span>
+<span class="sd">        C_next_hf (torch.Tensor): New constraint values of shape (n_pts, n_constraints) for high fidelity points</span>
+<span class="sd">        model_low (botorch.models.SingleTaskGP): Fitted low fidelity GP model</span>
+<span class="sd">        models_delta (List[botorch.models.SingleTaskGP]): Fitted delta GP models</span>
+<span class="sd">        rhos (List[float]): Correlation parameters between fidelities</span>
+<span class="sd">        type_of_centering (str): Type of centering to use (&quot;evaluated&quot; or &quot;predicted&quot;)</span>
+
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ScboState: Updated state of the optimization</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  
+    <span class="c1">#if no high fidelity in the batch, we do not update the state</span>
+    <span class="k">if</span> <span class="n">Y_next_hf</span> <span class="ow">is</span> <span class="kc">None</span> <span class="p">:</span>
+        <span class="k">return</span> <span class="n">state</span>
+    
+
+    <span class="c1">#Pick the best point from the batch</span>
+    <span class="n">best_ind</span> <span class="o">=</span> <span class="n">get_best_index_for_batch</span><span class="p">(</span><span class="n">Y</span><span class="o">=</span><span class="n">Y_next_hf</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="n">C_next_hf</span><span class="p">)</span>
+
+    <span class="n">y_next</span> <span class="o">=</span> <span class="n">Y_next_hf</span><span class="p">[</span><span class="n">best_ind</span><span class="p">]</span>
+    <span class="n">x_next</span> <span class="o">=</span> <span class="n">X_next_hf</span><span class="p">[</span><span class="n">best_ind</span><span class="p">]</span>
+    <span class="n">c_next</span> <span class="o">=</span> <span class="n">C_next_hf</span><span class="p">[</span><span class="n">best_ind</span><span class="p">]</span>
+    
+    <span class="k">if</span> <span class="n">type_of_centering</span> <span class="o">==</span> <span class="s2">&quot;predicted&quot;</span><span class="p">:</span>
+       
+        <span class="c1">#update actual center (state.best_value) with the new predicted value associated to model_high_fidelity</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">best_value</span> <span class="o">=</span> <span class="n">mean_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="o">=</span><span class="n">model_low</span><span class="p">,</span>
+                                              <span class="n">models_delta</span><span class="o">=</span><span class="n">models_delta</span><span class="p">,</span>
+                                              <span class="n">rhos</span><span class="o">=</span><span class="n">rhos</span><span class="p">,</span>
+                                              <span class="n">X</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">best_xvalue</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span>
+                                              <span class="n">fid</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">models_delta</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="c1">#because [fid_0, fid_1, ..., fid_S] so S = len(models_delta)-1</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">c_next</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">still_violated</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># At least one new candidate is feasible</span>
+        <span class="n">improvement_threshold</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">best_value</span> <span class="o">+</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">best_value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">y_next</span> <span class="o">&gt;</span> <span class="n">improvement_threshold</span> <span class="ow">or</span> <span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">best_constraint_values</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">success_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">failure_counter</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">best_value</span> <span class="o">=</span> <span class="n">y_next</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">best_xvalue</span> <span class="o">=</span> <span class="n">x_next</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">best_constraint_values</span> <span class="o">=</span> <span class="n">c_next</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">best_ind</span> <span class="o">=</span> <span class="n">best_ind</span> 
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">success_counter</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">failure_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># No new candidate is feasible</span>
+        <span class="n">total_violation_next</span> <span class="o">=</span> <span class="n">c_next</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">total_violation_center</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">best_constraint_values</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">total_violation_next</span> <span class="o">&lt;</span> <span class="n">total_violation_center</span><span class="p">:</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">success_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">failure_counter</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">best_value</span> <span class="o">=</span> <span class="n">y_next</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">best_xvalue</span> <span class="o">=</span> <span class="n">x_next</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">best_constraint_values</span> <span class="o">=</span> <span class="n">c_next</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">success_counter</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">failure_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="c1"># Update the length of the trust region according to the success and failure counters</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">update_tr_length</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">state</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Lucas Palazzolo.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

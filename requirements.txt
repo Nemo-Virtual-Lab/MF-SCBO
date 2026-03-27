@@ -1,0 +1,11 @@
+numpy
+matplotlib
+scipy
+torch
+torchvision
+botorch
+gpytorch
+matplotlib
+notebook
+sphinx
+sphinx_rtd_theme

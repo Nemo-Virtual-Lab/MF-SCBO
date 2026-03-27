@@ -1,0 +1,4 @@
+**/results
+**__pycache__*
+docs/sphinx/_build
+**/.ipynb_checkpoints

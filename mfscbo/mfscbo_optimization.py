@@ -172,8 +172,7 @@ def generate_batch_mf(
     fidelities = np.arange(nb_fidelities)
 
     # Create the TR bounds according high fidelity points
-    best_ind = get_best_index_for_batch(Y=Y_hf, C=C_hf)
-    x_center = X_hf[best_ind, :].clone()
+    x_center = state.best_xvalue.clone()
     tr_lb = torch.clamp(x_center - state.length / 2.0, 0.0, 1.0)
     tr_ub = torch.clamp(x_center + state.length / 2.0, 0.0, 1.0)
 

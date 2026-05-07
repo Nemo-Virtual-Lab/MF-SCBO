@@ -1,26 +1,29 @@
-
-
 <!DOCTYPE html>
 <html class="writer-html5" lang="en">
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>utils module &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css" />
 
   
-      <script src="../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=525cde36"></script>
-      <script src="../_static/doctools.js?v=888ff710"></script>
-      <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="plot module" href="plot.html" />
-    <link rel="prev" title="scbo_state module" href="scbo_state.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,26 +45,10 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="../mfscbo.html#mf-scbo-modules">MF-SCBO Modules</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="mfgp.html">mfgp module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="mfscbo_optimization.html">mfscbo_optimization module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="scbo_state.html">scbo_state module</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">utils module</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#mfscbo.utils.Print_log_and_console"><code class="docutils literal notranslate"><span class="pre">Print_log_and_console</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#mfscbo.utils.eval_fun_unnormalized"><code class="docutils literal notranslate"><span class="pre">eval_fun_unnormalized()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#mfscbo.utils.get_gp_info"><code class="docutils literal notranslate"><span class="pre">get_gp_info()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#mfscbo.utils.ensure_list"><code class="docutils literal notranslate"><span class="pre">ensure_list()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="plot.html">plot module</a></li>
-<li class="toctree-l3"><a class="reference internal" href="functions.html">functions module</a></li>
-</ul>
-</li>
-</ul>
-</li>
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">MF-SCBO Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/index.html">MF-SCBO API Reference</a></li>
 </ul>
 
         </div>
@@ -78,7 +65,6 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../mfscbo.html">Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)</a></li>
       <li class="breadcrumb-item active">utils module</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/mfscbo/utils.rst.txt" rel="nofollow"> View page source</a>
@@ -177,10 +163,7 @@
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="scbo_state.html" class="btn btn-neutral float-left" title="scbo_state module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="plot.html" class="btn btn-neutral float-right" title="plot module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 

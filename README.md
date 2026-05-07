@@ -72,7 +72,7 @@ eval_objectives = [f0, f1, f2]
 # Constraints
 # -----------------------------
 constraints = lambda x : (x[:, 0]**2 + x[:, 1]**2 - 1.0).unsqueeze(-1) #shape (N,nb_constraints), here nb_constraints=1
-def log_constraints(x) : #log transformation to improve, see scbo article
+def log_constraints(x) : #bilog transformation to improve, see scbo article
         c = constraints(x)
         return torch.sign(c) * torch.log(1 + torch.abs(c))
 

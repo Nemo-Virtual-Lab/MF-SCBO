@@ -29,7 +29,11 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
+    "myst_nb",
 ]
+
+# Notebook options
+nb_execution_mode = "off"
 
 # Napoleon options (improves parsing of Google/NumPy docstrings)
 napoleon_google_docstring = True
@@ -53,5 +57,18 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- HTML output -------------------------------------------------------------
 
+
+html_theme_options = {
+    "navigation_with_keys": True,
+    "source_repository": "https://github.com/Nemo-Virtual-Lab/MF-SCBO/",
+    "source_branch": "main",
+    "source_directory": "docs/sphinx/",
+}
+
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+
+
+
+def setup(app):
+    app.add_css_file("custom.css")

@@ -1,5 +1,5 @@
 from mfscbo.functions import Hartmann6
-from mfscbo.mfscbo_optimization import ScboMfOptimizer
+from mfscbo.mfscbo_optimization import ScboMfOptimizer, get_initial_points_mf
 from mfscbo.plot import plot_rhos, plot_noises, plot_bestYs, plot_nbiters, plot_tr_lengths
 from mfscbo.utils import eval_fun_unnormalized
 import torch
@@ -7,7 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-# Define torch arguments
+# Define parameters
+seed_init = 0 #seed for initial points
 torchargs = {"device" : "cpu", "dtype" : torch.double}
 
 # Define evaluation objectives (and rewrite as maximization pb because of scbo)
@@ -26,9 +27,16 @@ f2 = lambda x : -eval_fun_unnormalized(x, f2_, bounds)
 eval_objectives = [f0, f1, f2]
 
 # Define constraints
-r_constraint = 0.4
-center_constraint = torch.tensor([0.20169, 0.150011, 0.476874, 0.275332, 0.311652, 0.6573], **torchargs)
-constraints = lambda x : torch.sum((x - center_constraint)**2, dim=1, keepdim=True) - r_constraint**2
+def constraints(x) :
+    c1 = torch.norm(x, dim=1)**2 - 1
+    return c1[:,None]
+
+def log_constraints(x) :
+    c = constraints(x)
+    return torch.sign(c) * torch.log(1 + torch.abs(c))
+
+def eval_constraints(x) :
+    return eval_fun_unnormalized(x, log_constraints, bounds)
 
 # Define number of initial points, rhos and costs
 n_pts = [12, 9, 3] #total 4*dim = 12+9+3
@@ -38,7 +46,7 @@ costs = [1, 10, 20]
 
 # Initialize and run the optimizer
 optimizer = ScboMfOptimizer(eval_objectives=eval_objectives,
-                        constraints=constraints,
+                        constraints=eval_constraints,
                         rhos=rhos,
                         costs=costs,
                         dim=dim,
@@ -49,7 +57,10 @@ optimizer = ScboMfOptimizer(eval_objectives=eval_objectives,
                         torchargs=torchargs,
                         restart=True,
                         test=True) #in predictive mode, the best_Y is then computed with high-fidelity evaluations
-optimizer.initialize()
+
+
+initial_X = get_initial_points_mf(dim, n_pts, torchargs, seed=seed_init)
+optimizer.initialize(added_X=initial_X)
 optimizer.optimize(max_cost=2000, batch_size=8, path="results/Hartmann6", verbose=True)
 
 # Load results
@@ -57,7 +68,7 @@ data = np.load("results/Hartmann6/MFSCBO_data.npz", allow_pickle=True)
 gps_info = data["gps_info"]
 iterations = data["iterations"]
 xvalues = data["cost_iter"]
-bestY = data["best_Y"]
+bestY = -data["best_Y"] #for minimization plot
 nbiters = data["nb_iter"]
 tr_lengths = data["trust_region_lengths"]
 

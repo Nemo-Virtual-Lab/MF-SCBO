@@ -85,11 +85,9 @@ class Borehole8 :
         x8 = x[:, 7]
 
         if self.s == 1.0 :
-            return 2*torch.pi * x3 * (x4 - x6) / (torch.log(x2/x1) * (1 + 2*x7*x3/(torch.log(x2/x1)*x1**2*x8) + x3/x5))
+            return (2*torch.pi * x3 * (x4 - x6) / (torch.log(x2/x1) * (1 + 2*x7*x3/(torch.log(x2/x1)*x1**2*x8) + x3/x5)))[:, None]
         elif self.s == 0.0 :
-            return 5*x3*(x4 - x6) / (torch.log(x2/x1) * (1.5 + 2*x7*x3/(torch.log(x2/x1)*x1**2*x8) + x3/x5))
-
-
+            return (5*x3*(x4 - x6) / (torch.log(x2/x1) * (1.5 + 2*x7*x3/(torch.log(x2/x1)*x1**2*x8) + x3/x5)))[:, None]
 
 class Rastrigin :
     """Rastrigin function for different fidelities in dimension d.
@@ -139,7 +137,7 @@ class Ackley :
 
         value = term1 + term2 + a + torch.exp(torch.tensor(1.0, **self.torchargs))
         
-        return value
+        return value[:, None]
 
     def _low_fid(self, x) :
         
@@ -151,7 +149,7 @@ class Ackley :
 
         value = term1 + term2 + 20 + torch.exp(torch.tensor(1.0, **self.torchargs))
         
-        return value
+        return value[:, None]
     
     def __call__(self, x):
         
@@ -197,11 +195,11 @@ class Rosenbrock :
         x = x.to(**self.torchargs)
 
         if self.s == 3 :
-            return self._high_fid(x)
+            return self._high_fid(x)[:, None]
         elif self.s == 2 :
-            return self._mid_fid(x)
+            return self._mid_fid(x)[:, None]
         elif self.s == 1 :
-            return self._low_fid(x)
+            return self._low_fid(x)[:, None]
 
 
 

@@ -118,13 +118,19 @@ data = np.load("results/test/MFSCBO_data.npz", allow_pickle=True)
 gps_info = data["gps_info"]
 iterations = data["iterations"]
 xvalues = data["cost_iter"]
-bestY = data["best_Y"]
+bestY = -data["best_Y"] #for minimization plot
+best_C = data["best_C"]
 nbiters = data["nb_iter"]
 tr_lengths = data["trust_region_lengths"]
 
 # -----------------------------
 # Post-process results
 # -----------------------------
+best_violated_C = np.sum(np.maximum(0, best_C), axis=1) #bestY when constraints are not respected 
+bestY = np.array(bestY, dtype=np.float64)
+running_max = np.max(bestY)
+bestY = np.where(best_violated_C > 0, running_max, bestY)
+
 rhos_values = [[1] for _ in range(len(gps_info)-1)]
 for fid in range(1, len(gps_info)):
     for it in range(len(iterations)-1):

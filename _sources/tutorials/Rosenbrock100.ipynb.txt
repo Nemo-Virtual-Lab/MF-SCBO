@@ -12572,7 +12572,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 10,
+   "execution_count": null,
    "id": "e3504f50",
    "metadata": {},
    "outputs": [
@@ -12620,7 +12620,7 @@
     "ax5.grid()\n",
     "\n",
     "plt.tight_layout()\n",
-    "plt.savefig(\"results/Hartmann6/MFSCBO_plots.pdf\")\n",
+    "plt.savefig(\"results/Rosenbrock100/MFSCBO_plots.pdf\")\n",
     "plt.show()"
    ]
   }

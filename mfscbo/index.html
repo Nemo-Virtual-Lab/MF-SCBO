@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MF-SCBO Documentation &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
+  <title>MF-SCBO API Reference &mdash; Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO) 0.0.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css" />
       <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
@@ -24,7 +24,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="MF-SCBO API Reference" href="../tutorials/index.html" />
+    <link rel="next" title="mfgp module" href="mfgp.html" />
     <link rel="prev" title="MF-SCBO Documentation" href="../index.html" /> 
 </head>
 
@@ -49,11 +49,16 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">MF-SCBO Documentation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#indices">Indices</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">MF-SCBO API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mfgp.html">mfgp module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mfscbo_optimization.html">mfscbo_optimization module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="scbo_state.html">scbo_state module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plot.html">plot module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functions.html">functions module</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../tutorials/index.html">MF-SCBO API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/index.html">Tutorials</a></li>
 </ul>
 
         </div>
@@ -70,7 +75,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">MF-SCBO Documentation</li>
+      <li class="breadcrumb-item active">MF-SCBO API Reference</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/mfscbo/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -80,24 +85,20 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="mf-scbo-documentation">
-<h1>MF-SCBO Documentation<a class="headerlink" href="#mf-scbo-documentation" title="Permalink to this heading"></a></h1>
-<p>Multi-Fidelity Scalable Constrained Bayesian Optimization (MF-SCBO)
-is a Python library for solving constrained Bayesian optimization
-problems using multi-fidelity information.</p>
-<p>It is designed for high-dimensional optimization problems where
-evaluations are expensive and constraints are present.</p>
-<p>Use the navigation below to explore the available modules and tutorials.</p>
+  <section id="mf-scbo-api-reference">
+<h1>MF-SCBO API Reference<a class="headerlink" href="#mf-scbo-api-reference" title="Permalink to this heading"></a></h1>
+<p>This section documents the core modules of MF-SCBO.</p>
 <div class="toctree-wrapper compound">
-</div>
-<section id="indices">
-<h2>Indices<a class="headerlink" href="#indices" title="Permalink to this heading"></a></h2>
-<ul class="simple">
-<li><p><a class="reference internal" href="../genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="../py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="../search.html"><span class="std std-ref">Search Page</span></a></p></li>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="mfgp.html">mfgp module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mfscbo_optimization.html">mfscbo_optimization module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scbo_state.html">scbo_state module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plot.html">plot module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="functions.html">functions module</a></li>
 </ul>
-</section>
+</div>
 </section>
 
 
@@ -105,7 +106,7 @@ evaluations are expensive and constraints are present.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../index.html" class="btn btn-neutral float-left" title="MF-SCBO Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../tutorials/index.html" class="btn btn-neutral float-right" title="MF-SCBO API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="mfgp.html" class="btn btn-neutral float-right" title="mfgp module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

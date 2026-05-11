@@ -1,15 +1,14 @@
-MF-SCBO API Reference
-=====================
+Tutorials
+=========
 
-This section documents the core modules of MF-SCBO.
+This section contains step-by-step examples and Jupyter notebooks
+demonstrating how to use MF-SCBO in practice.
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Modules
+   :maxdepth: 2
+   :caption: Tutorials
 
-   mfgp
-   mfscbo_optimization
-   scbo_state
-   utils
-   plot
-   functions
+   Hartmann6
+   Borehole8
+   Ackley20
+   Rosenbrock100

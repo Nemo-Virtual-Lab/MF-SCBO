@@ -79,7 +79,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tensor</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">mfscbo.mfgp</span><span class="w"> </span><span class="kn">import</span> <span class="n">mean_of_fidelity_i</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mfscbo.mfgp</span><span class="w"> </span><span class="kn">import</span> <span class="n">mean_var_of_fidelity_i</span>
 
 
 <span class="c1">## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</span>
@@ -191,11 +191,11 @@
     <span class="k">if</span> <span class="n">type_of_centering</span> <span class="o">==</span> <span class="s2">&quot;predicted&quot;</span><span class="p">:</span>
        
         <span class="c1">#update actual center (state.best_value) with the new predicted value associated to model_high_fidelity</span>
-        <span class="n">state</span><span class="o">.</span><span class="n">best_value</span> <span class="o">=</span> <span class="n">mean_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="o">=</span><span class="n">model_low</span><span class="p">,</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">best_value</span> <span class="o">=</span> <span class="n">mean_var_of_fidelity_i</span><span class="p">(</span><span class="n">model_low</span><span class="o">=</span><span class="n">model_low</span><span class="p">,</span>
                                               <span class="n">models_delta</span><span class="o">=</span><span class="n">models_delta</span><span class="p">,</span>
                                               <span class="n">rhos</span><span class="o">=</span><span class="n">rhos</span><span class="p">,</span>
                                               <span class="n">X</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">best_xvalue</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span>
-                                              <span class="n">fid</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">models_delta</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="c1">#because [fid_0, fid_1, ..., fid_S] so S = len(models_delta)-1</span>
+                                              <span class="n">fid</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">models_delta</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="c1">#because [fid_0, fid_1, ..., fid_S] so S = len(models_delta)-1</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="n">c_next</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
         <span class="n">state</span><span class="o">.</span><span class="n">still_violated</span> <span class="o">=</span> <span class="kc">False</span>

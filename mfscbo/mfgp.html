@@ -59,7 +59,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel.training"><code class="docutils literal notranslate"><span class="pre">DeltaGPModel.training</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.mean_of_fidelity_i"><code class="docutils literal notranslate"><span class="pre">mean_of_fidelity_i()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.mean_var_of_fidelity_i"><code class="docutils literal notranslate"><span class="pre">mean_var_of_fidelity_i()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.samples_of_fidelity_i"><code class="docutils literal notranslate"><span class="pre">samples_of_fidelity_i()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.get_fitted_model"><code class="docutils literal notranslate"><span class="pre">get_fitted_model()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.fit_model_delta"><code class="docutils literal notranslate"><span class="pre">fit_model_delta()</span></code></a></li>
@@ -171,9 +171,9 @@ If False, returns the latent function posterior. Defaults to True.</p></li>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="mfscbo.mfgp.mean_of_fidelity_i">
-<span class="sig-prename descclassname"><span class="pre">mfscbo.mfgp.</span></span><span class="sig-name descname"><span class="pre">mean_of_fidelity_i</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">models_delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfgp.html#mean_of_fidelity_i"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfgp.mean_of_fidelity_i" title="Permalink to this definition"></a></dt>
-<dd><p>Compute the mean of the fidelity i function at points X.</p>
+<dt class="sig sig-object py" id="mfscbo.mfgp.mean_var_of_fidelity_i">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.mfgp.</span></span><span class="sig-name descname"><span class="pre">mean_var_of_fidelity_i</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">models_delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfgp.html#mean_var_of_fidelity_i"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfgp.mean_var_of_fidelity_i" title="Permalink to this definition"></a></dt>
+<dd><p>Compute the mean and variance of the fidelity i function at points X.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

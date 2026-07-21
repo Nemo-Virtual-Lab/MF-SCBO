@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import math
 import torch
 from torch import Tensor
-from mfscbo.mfgp import mean_of_fidelity_i
+from mfscbo.mfgp import mean_var_of_fidelity_i
 
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -114,11 +114,11 @@ def update_state(state,
     if type_of_centering == "predicted":
        
         #update actual center (state.best_value) with the new predicted value associated to model_high_fidelity
-        state.best_value = mean_of_fidelity_i(model_low=model_low,
+        state.best_value = mean_var_of_fidelity_i(model_low=model_low,
                                               models_delta=models_delta,
                                               rhos=rhos,
                                               X=state.best_xvalue[None, :],
-                                              fid=len(models_delta)-1).item() #because [fid_0, fid_1, ..., fid_S] so S = len(models_delta)-1
+                                              fid=len(models_delta)-1)[0].item() #because [fid_0, fid_1, ..., fid_S] so S = len(models_delta)-1
 
     if (c_next <= 0).all():
         state.still_violated = False

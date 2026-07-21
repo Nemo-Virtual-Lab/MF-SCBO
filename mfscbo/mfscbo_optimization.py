@@ -10,7 +10,7 @@ from botorch.models import ModelListGP
 from botorch.utils.transforms import unnormalize
 
 from mfscbo.utils import Print_log_and_console, get_gp_info
-from mfscbo.mfgp import DeltaGPModel, mean_of_fidelity_i, samples_of_fidelity_i, get_fitted_model, fit_model_delta
+from mfscbo.mfgp import DeltaGPModel, mean_var_of_fidelity_i, samples_of_fidelity_i, get_fitted_model, fit_model_delta
 from mfscbo.scbo_state import ScboState, update_state, get_best_index_for_batch
 
 
@@ -235,11 +235,11 @@ def generate_batch_mf(
             ## mean predictions
             means_next = []
             for i in fidelities :
-                means_next.append(mean_of_fidelity_i(model_low=model_lf,
+                means_next.append(mean_var_of_fidelity_i(model_low=model_lf,
                                                      models_delta=models_delta,
                                                      rhos=rhos,
                                                      X=X_next,
-                                                     fid=i))  #[batch] 
+                                                     fid=i)[0])  #[batch] 
             ## Y predictions
             Y_next = []
             for i in fidelities :
@@ -293,12 +293,12 @@ def generate_batch_mf(
             ## mean predictions
             means_next = []
             for i in fidelities :
-                means_next.append(mean_of_fidelity_i(model_low=model_lf,
+                means_next.append(mean_var_of_fidelity_i(model_low=model_lf,
                                                      models_delta=models_delta,
                                                      rhos=rhos,
                                                      X=X_next,
-                                                     fid=i))  #[batch] 
-           
+                                                     fid=i)[0])  #[batch] 
+
             ## Y predictions
             Y_next = []
             for i in fidelities :
@@ -881,7 +881,7 @@ class ScboMfOptimizer:
 
                     #get Y_fid_im1
                     Y_fid_im1_in_fid_i = Y_fid_im1[mask_in_of_fid_im1]
-                    Y_fid_im1_out_fid_i_pred = mean_of_fidelity_i(model_low, models_delta, self.rhos, X_fid_i[mask_out_of_fid_i], fid - 1)
+                    Y_fid_im1_out_fid_i_pred = mean_var_of_fidelity_i(model_low, models_delta, self.rhos, X_fid_i[mask_out_of_fid_i], fid - 1)[0]
                     Y_fid_im1_out_fid_i_pred = Y_fid_im1_out_fid_i_pred[:,None]
                    
                     #concatenate the two parts to get Y_fid_im1 as high fidelity points
@@ -992,7 +992,7 @@ class ScboMfOptimizer:
                         C_high_inter = torch.zeros((1, self.C[0].shape[-1]), **self.torchargs)
                 
                 elif self.type_of_centering == "predicted" : #we update the state with high fidelity predictions of the X_next points
-                    Y_high_pred = mean_of_fidelity_i(model_low, models_delta, self.rhos, X_next[:,:-1], self.fidelities[-1])
+                    Y_high_pred = mean_var_of_fidelity_i(model_low, models_delta, self.rhos, X_next[:,:-1], self.fidelities[-1])[0]
                     state = update_state(state=state, 
                                           Y_next_hf=Y_high_pred, 
                                           X_next_hf=X_next[:,:-1],

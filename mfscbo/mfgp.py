@@ -86,8 +86,8 @@ class DeltaGPModel(gpytorch.models.ExactGP):
                 mvn = self.likelihood(mvn)
         return mvn
 
-def mean_of_fidelity_i(model_low, models_delta, rhos, X, fid):
-    """Compute the mean of the fidelity i function at points X.
+def mean_var_of_fidelity_i(model_low, models_delta, rhos, X, fid):
+    """Compute the mean and variance of the fidelity i function at points X.
 
     Args:
         model_low (botorch.models.SingleTaskGP): Low fidelity GP model
@@ -101,15 +101,19 @@ def mean_of_fidelity_i(model_low, models_delta, rhos, X, fid):
     """
 
     if fid == 0 :
-        return model_low.posterior(X).mean.squeeze(-1)
+        return model_low.posterior(X).mean.squeeze(-1), model_low.posterior(X).variance.squeeze(-1)
     else :
         mean = model_low.posterior(X).mean.squeeze(-1)
+        var = model_low.posterior(X).variance.squeeze(-1)
         for i in range(1, fid + 1):
             rho_i = rhos[i]
             model_delta_i = models_delta[i]
             mean_delta_i = model_delta_i.posterior(X).mean.squeeze(-1)
             mean = rho_i * mean + mean_delta_i
-        return mean
+            var_delta_i = model_delta_i.posterior(X).variance.squeeze(-1)
+            var = (rho_i ** 2) * var + var_delta_i
+        return mean, var
+
 
 def samples_of_fidelity_i(model_low, models_delta, rhos, X, fid, n_samples):
     """Compute samples of the fidelity i function at points X.

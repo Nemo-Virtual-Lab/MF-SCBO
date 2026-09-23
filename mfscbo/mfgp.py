@@ -10,6 +10,7 @@ from botorch.optim.fit import fit_gpytorch_mll_scipy
 from gpytorch.models import ApproximateGP
 from gpytorch.variational import VariationalStrategy, CholeskyVariationalDistribution
 from botorch.models.gpytorch import GPyTorchModel
+import warnings
 
 
 
@@ -37,7 +38,7 @@ class DeltaGPModel(gpytorch.models.ExactGP):
         # rho 
         self.raw_rho = Parameter(torch.tensor(1.0, **torchargs))
         self.register_parameter("raw_rho", self.raw_rho)
-        self.register_constraint("raw_rho", gpytorch.constraints.Interval(0.5, 2.0))
+        self.register_constraint("raw_rho", gpytorch.constraints.Interval(0., 2.0))
 
   
         self.mean_module = gpytorch.means.ConstantMean().to(**torchargs)
@@ -58,6 +59,15 @@ class DeltaGPModel(gpytorch.models.ExactGP):
         delta_mean = self.mean_module(x)
         delta_covar = self.covar_module(x)
         return gpytorch.distributions.MultivariateNormal(delta_mean, delta_covar)
+    
+    def check_rho(self, threshold=1e-3):
+        """Warn if rho is too close to zero."""
+
+        rho = self.rho.detach().item()
+
+        if rho < threshold:
+            print(f"rho is very close to 0: rho = {rho:.3e}")
+         
 
     def delta_targets(self):
         """Compute the delta targets for training, i.e., Y_fid_i - rho * Y_fid_im1.

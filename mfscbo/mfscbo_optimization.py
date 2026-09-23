@@ -2,6 +2,7 @@ import os
 import sys
 import gc
 import numpy as np
+import copy 
 
 import torch
 from torch.quasirandom import SobolEngine
@@ -993,14 +994,113 @@ class ScboMfOptimizer:
                 
                 elif self.type_of_centering == "predicted" : #we update the state with high fidelity predictions of the X_next points
                     Y_high_pred = mean_var_of_fidelity_i(model_low, models_delta, self.rhos, X_next[:,:-1], self.fidelities[-1])[0]
-                    state = update_state(state=state, 
-                                          Y_next_hf=Y_high_pred, 
-                                          X_next_hf=X_next[:,:-1],
-                                          C_next_hf=C_next, 
-                                          model_low=model_low,
-                                          models_delta=models_delta,
-                                          rhos=self.rhos,
-                                          type_of_centering=self.type_of_centering)
+                        
+
+                    #/!\ TODO : use analytic formula for LOO criterion instead of recomputing the model with leave one out
+                    state_inter = update_state(state=copy.deepcopy(state), 
+                                Y_next_hf=Y_high_pred, 
+                                X_next_hf=X_next[:,:-1],
+                                C_next_hf=C_next, 
+                                model_low=model_low,
+                                models_delta=models_delta,
+                                rhos=self.rhos,
+                                type_of_centering=self.type_of_centering)
+                    #compute leave one out of the center of the trust region according the fidelity level of the center of the trust region
+                    center_tr_region = state_inter.best_xvalue
+                    #compare state.best_xvalue with the points in X_next to find the index of the center of the trust region
+                    index_center_tr_region = torch.where((X_next[:,:-1] == center_tr_region).all(dim=1))[0]
+                    if index_center_tr_region.shape[0] != 0 :
+                        fid_center_tr_region = int(X_next[index_center_tr_region[0], -1].item())
+                        train_X_loo = [None for _ in self.fidelities]
+                        train_Y_loo = [None for _ in self.fidelities]
+                        for fid in self.fidelities :
+                                train_X_loo[fid] = self.trains_X[fid]
+                                train_Y_loo[fid] = self.trains_Y[fid]
+                        #add X_next and Y_next except the center of the trust region to the training data
+                        for i in range(X_next.shape[0]) :
+                            if i != index_center_tr_region[0] :
+                                fid = int(X_next[i,-1].item())
+                                train_X_loo[fid] = torch.cat((train_X_loo[fid], X_next[i,:][None,:]), dim=0)
+                                train_Y_loo[fid] = torch.cat((train_Y_loo[fid], Y_next[i,:][None,:]), dim=0)
+                    
+                        #fit gps and constraints 
+                        model_low_loo = get_fitted_model(train_X_loo[0][:, :-1], train_Y_loo[0], noise_interval, martern_nu, lengthscale_interval)
+                        models_delta_loo = [None]
+                        rhos_loo = [None for _ in self.fidelities]
+                        for fid in self.fidelities :
+                            if fid != 0 :
+                                X_fid_i_loo = train_X_loo[fid][:, :-1]
+                                X_fid_im1_loo = train_X_loo[fid - 1][:, :-1]
+                                Y_fid_i_loo = train_Y_loo[fid]
+                                Y_fid_im1_loo = train_Y_loo[fid - 1]
+
+                                #get indices of X_fid_i that are not in X_fid_im1
+                                mask_out_of_fid_i_loo, mask_in_of_fid_i_loo, mask_in_of_fid_im1_loo = out_and_in(X_fid_i_loo, X_fid_im1_loo)
+
+                                #get Y_fid_im1
+                                Y_fid_im1_in_fid_i_loo = Y_fid_im1_loo[mask_in_of_fid_im1_loo]
+                                Y_fid_im1_out_fid_i_pred_loo = mean_var_of_fidelity_i(model_low_loo, models_delta_loo, self.rhos, X_fid_i_loo[mask_out_of_fid_i_loo], fid - 1)[0]
+                                Y_fid_im1_out_fid_i_pred_loo = Y_fid_im1_out_fid_i_pred_loo[:,None]
+
+                                #concatenate the two parts to get Y_fid_im1 as high fidelity points
+                                virtual_Y_fid_im1_loo = torch.cat((Y_fid_im1_in_fid_i_loo, Y_fid_im1_out_fid_i_pred_loo), dim=0)
+                                virtual_X_fid_im1_loo = torch.cat((X_fid_i_loo[mask_in_of_fid_i_loo], X_fid_i_loo[mask_out_of_fid_i_loo]), dim=0)
+                                Y_fid_i_ordered_loo = torch.cat((Y_fid_i_loo[mask_in_of_fid_i_loo], Y_fid_i_loo[mask_out_of_fid_i_loo]), dim=0)
+
+                                #delta model fit
+                                model_delta_loo = DeltaGPModel(virtual_X_fid_im1_loo, #all in X_fid_i points
+                                                        Y_fid_i_ordered_loo,
+                                                        virtual_Y_fid_im1_loo,
+                                                        covar_module=gpytorch.kernels.ScaleKernel(
+                                                                gpytorch.kernels.MaternKernel(
+                                                                    nu=2.5,
+                                                                    ard_num_dims=self.dim,
+                                                                    lengthscale_constraint=gpytorch.constraints.Interval(0.005, 4.0),
+                                                                )
+                                                            ),
+                                                            likelihood=gpytorch.likelihoods.GaussianLikelihood(
+                                                            noise_constraint=gpytorch.constraints.Interval(1e-6, 1e-3)
+                                                        )
+                                                        , torchargs=self.torchargs
+                                                        )
+                                fit_model_delta(model_delta_loo, virtual_X_fid_im1_loo)
+
+                                rhos_loo[fid] = model_delta_loo.rho.item()
+                                models_delta_loo.append(model_delta_loo)
+                        
+                        #error loo betwenn predicted value of models_loo and the true value of the center of the trust region
+                        pred_center_tr_region, var_center_tr_region = mean_var_of_fidelity_i(model_low_loo, models_delta_loo, rhos_loo, state.best_xvalue[None,:], fid_center_tr_region)#compliqué de fixer car il faut que le modèle soit fit, ce qui se fait au début de la boucle
+                        conf_inter_95_loo = 1.96 * torch.sqrt(var_center_tr_region).item()
+                        error_loo = torch.abs(pred_center_tr_region - self.eval_objectives[fid_center_tr_region](state.best_xvalue[None,:])[0]).item()
+                        print(f"================= error : {error_loo} =================")
+                        print(f"================= conf_inter_95 : {conf_inter_95_loo} =================")
+                        if error_loo > conf_inter_95_loo:
+                            print("ADD HIGH FID POINT")
+                            #we evaluate the true value of the center with the high fidelity function and update the state 
+                            true_value_center = self.eval_objectives[-1](state.best_xvalue[None,:])[0]
+                            #augment X_next, Y_next, C_next  
+                            #X_next with high fidelity point
+                            X_next = torch.cat((X_next, torch.cat((state.best_xvalue[None,:], torch.tensor([[self.fidelities[-1]]], **self.torchargs)), dim=1)), dim=0)
+                            Y_next = torch.cat((Y_next, true_value_center[None,:]), dim=0)
+                            C_next = torch.cat((C_next, self.constraints(state.best_xvalue[None,:])), dim=0)
+                            
+                            #now pred
+                            Y_high_pred = mean_var_of_fidelity_i(model_low, models_delta, self.rhos, X_next[:,:-1], self.fidelities[-1])[0]
+                            state = update_state(state=state, 
+                                                 Y_next_hf=Y_high_pred, 
+                                                 X_next_hf=X_next[:,:-1],
+                                                 C_next_hf=C_next,
+                                                 model_low=model_low,
+                                                 models_delta=models_delta,
+                                                 rhos=self.rhos,
+                                                 type_of_centering=self.type_of_centering)
+                            
+                            #augment n_fid_points for the high fidelity point
+                            n_fid_points[-1] += 1
+                    else :
+                        state = copy.deepcopy(state_inter)
+                            
+                
 
 
             # concatenate the new points to the training data

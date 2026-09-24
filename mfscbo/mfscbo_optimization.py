@@ -40,43 +40,6 @@ delta = [delta_0, delta_1, delta_2, ..., delta_S] with delta_0 = None
 """
 
 
-def out_and_in(X_i, X_im1, rtol=1e-9, atol=1e-8):
-    """Separate points X_i into points that are also in X_im1 and points that are not.
-       The comparison is done by using : ||x - y|| <= atol + rtol * ||y|| => ||x-y||/||y|| <= rtol + atol/||y||
-
-    Args:
-        X_i (torch.Tensor): Points to separate of shape (n_i, dim)
-        X_im1 (torch.Tensor): Reference points of shape (n_im1, dim)
-        rtol (float, optional): Relative tolerance. Defaults to 1e-9.
-        atol (float, optional): Absolute tolerance. Defaults to 1e-8.
-
-    Returns:
-        Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: (indices out according to X_im1 for i, indices in according to X_im1 for i, indices in according to X_im1 for im1)
-    """
-    diff = X_i.unsqueeze(1) - X_im1.unsqueeze(0)  # shape : (n_i, n_im1, dim) = (n_i, 1, dim) - (1, n_im1, dim)
-    dist = diff.norm(dim=-1)                      #shape : (n_i, n_im1)
-
-    ref_norm = X_im1.norm(dim=-1).unsqueeze(0)    #shape : (1, n_im1)
-    tol = atol + rtol * ref_norm
-
-    # Don't do in_mask_fid_i = in_mask.any(dim=1)  because multiple points can be close
-    min_idx = dist.argmin(dim=0)  #shape : (n_im1)
-    mask_of_dist = torch.zeros_like(dist, dtype=torch.bool)  #shape : (n_i, n_im1)
-    mask_of_dist[min_idx, torch.arange(dist.shape[1])] = True
-    dist_unique = torch.full_like(dist, float("inf"))  #shape : (n_i, n_im1)
-    dist_unique[mask_of_dist] = dist[mask_of_dist]
-    in_mask_fid_i = (dist_unique <= tol).any(dim=1)  #shape : (n_i)
-
-    # Don't do in_mask_fid_im1 = in_mask.any(dim=0)  because multiple points can be close
-    min_idx = dist.argmin(dim=1)  #shape : (n_i)
-    mask_of_dist = torch.zeros_like(dist, dtype=torch.bool)  #shape : (n_i, n_im1)
-    mask_of_dist[torch.arange(dist.shape[0]), min_idx] = True
-    dist_unique = torch.full_like(dist, float("inf"))  #shape : (n_i, n_im1)
-    dist_unique[mask_of_dist] = dist[mask_of_dist]
-    in_mask_fid_im1 = (dist_unique <= tol).any(dim=0)  #shape : (n_im1)
-
-    return ~in_mask_fid_i, in_mask_fid_i, in_mask_fid_im1
-
 def get_initial_points_mf(dim, n_pts, torchargs, seed=None):
     """ Generate initial points for multi-fidelity optimization.
 
@@ -230,7 +193,16 @@ def generate_batch_mf(
                 scores[~has_feas] = -total_violation
             
             ##pick the best points according to the type of sampling
-            argmax_idx = scores.argmax(dim=-1) #[batch]
+            #each realization takes its best candidate among those not already chosen (no duplicated points in the batch)
+            argmax_idx = torch.empty(batch_size, dtype=torch.long, device=scores.device) #[batch]
+            chosen = torch.zeros(n_candidates, dtype=torch.bool, device=scores.device) #[n_candidates]
+            for b in range(batch_size) :
+                scores_b = torch.where(chosen, -float("inf"), scores[b])
+                if torch.isinf(scores_b).all() : #all remaining candidates at -inf : take the first one not chosen
+                    argmax_idx[b] = torch.where(~chosen)[0][0]
+                else :
+                    argmax_idx[b] = scores_b.argmax()
+                chosen[argmax_idx[b]] = True
             X_next = X_cand[argmax_idx] #[batch, dim]
 
             ## mean predictions

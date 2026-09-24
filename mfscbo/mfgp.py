@@ -261,6 +261,9 @@ def fit_model_delta(model_delta, X) :
         options={"disp": False}
     )
 
+    # condition the posterior on the delta targets with the fitted rho
+    model_delta.condition_on_residuals()
+
 
 class Binary_GPModel(ApproximateGP,GPyTorchModel) : #from https://botorch.org/docs/notebooks_community/clf_constrained_bo/
     """GP model for binary classification in constrained Bayesian optimization."""

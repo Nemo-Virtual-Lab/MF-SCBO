@@ -76,6 +76,7 @@
              
   <h1>Source code for mfscbo.utils</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">botorch.utils.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">unnormalize</span>
 
 <span class="n">COLORS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;#6aab5d&quot;</span><span class="p">,</span> <span class="s2">&quot;#635edf&quot;</span><span class="p">,</span> <span class="s2">&quot;#d96260&quot;</span><span class="p">,</span><span class="s2">&quot;#efc266&quot;</span><span class="p">]</span>
@@ -167,6 +168,43 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">val</span><span class="p">]</span> <span class="o">*</span> <span class="n">num_fidelities</span>
     <span class="k">return</span> <span class="n">val</span></div>
+
+<div class="viewcode-block" id="out_and_in"><a class="viewcode-back" href="../../mfscbo/utils.html#mfscbo.utils.out_and_in">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">out_and_in</span><span class="p">(</span><span class="n">X_i</span><span class="p">,</span> <span class="n">X_im1</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Separate points X_i into points that are also in X_im1 and points that are not.</span>
+<span class="sd">       The comparison is done by using : ||x - y|| &lt;= atol + rtol * ||y|| =&gt; ||x-y||/||y|| &lt;= rtol + atol/||y||</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        X_i (torch.Tensor): Points to separate of shape (n_i, dim)</span>
+<span class="sd">        X_im1 (torch.Tensor): Reference points of shape (n_im1, dim)</span>
+<span class="sd">        rtol (float, optional): Relative tolerance. Defaults to 1e-9.</span>
+<span class="sd">        atol (float, optional): Absolute tolerance. Defaults to 1e-8.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: (indices out according to X_im1 for i, indices in according to X_im1 for i, indices in according to X_im1 for im1)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">X_i</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">X_im1</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># shape : (n_i, n_im1, dim) = (n_i, 1, dim) - (1, n_im1, dim)</span>
+    <span class="n">dist</span> <span class="o">=</span> <span class="n">diff</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>                      <span class="c1">#shape : (n_i, n_im1)</span>
+
+    <span class="n">ref_norm</span> <span class="o">=</span> <span class="n">X_im1</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>    <span class="c1">#shape : (1, n_im1)</span>
+    <span class="n">tol</span> <span class="o">=</span> <span class="n">atol</span> <span class="o">+</span> <span class="n">rtol</span> <span class="o">*</span> <span class="n">ref_norm</span>
+
+    <span class="c1"># Don&#39;t do in_mask_fid_i = in_mask.any(dim=1)  because multiple points can be close</span>
+    <span class="n">min_idx</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1">#shape : (n_im1)</span>
+    <span class="n">mask_of_dist</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>  <span class="c1">#shape : (n_i, n_im1)</span>
+    <span class="n">mask_of_dist</span><span class="p">[</span><span class="n">min_idx</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">dist_unique</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">))</span>  <span class="c1">#shape : (n_i, n_im1)</span>
+    <span class="n">dist_unique</span><span class="p">[</span><span class="n">mask_of_dist</span><span class="p">]</span> <span class="o">=</span> <span class="n">dist</span><span class="p">[</span><span class="n">mask_of_dist</span><span class="p">]</span>
+    <span class="n">in_mask_fid_i</span> <span class="o">=</span> <span class="p">(</span><span class="n">dist_unique</span> <span class="o">&lt;=</span> <span class="n">tol</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1">#shape : (n_i)</span>
+
+    <span class="c1"># Don&#39;t do in_mask_fid_im1 = in_mask.any(dim=0)  because multiple points can be close</span>
+    <span class="n">min_idx</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1">#shape : (n_i)</span>
+    <span class="n">mask_of_dist</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>  <span class="c1">#shape : (n_i, n_im1)</span>
+    <span class="n">mask_of_dist</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">min_idx</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">dist_unique</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">))</span>  <span class="c1">#shape : (n_i, n_im1)</span>
+    <span class="n">dist_unique</span><span class="p">[</span><span class="n">mask_of_dist</span><span class="p">]</span> <span class="o">=</span> <span class="n">dist</span><span class="p">[</span><span class="n">mask_of_dist</span><span class="p">]</span>
+    <span class="n">in_mask_fid_im1</span> <span class="o">=</span> <span class="p">(</span><span class="n">dist_unique</span> <span class="o">&lt;=</span> <span class="n">tol</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1">#shape : (n_im1)</span>
+
+    <span class="k">return</span> <span class="o">~</span><span class="n">in_mask_fid_i</span><span class="p">,</span> <span class="n">in_mask_fid_i</span><span class="p">,</span> <span class="n">in_mask_fid_im1</span></div>
 </pre></div>
 
            </div>

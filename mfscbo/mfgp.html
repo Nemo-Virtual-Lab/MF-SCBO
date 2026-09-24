@@ -54,13 +54,19 @@
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel"><code class="docutils literal notranslate"><span class="pre">DeltaGPModel</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel.rho"><code class="docutils literal notranslate"><span class="pre">DeltaGPModel.rho</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel.forward"><code class="docutils literal notranslate"><span class="pre">DeltaGPModel.forward()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel.check_rho"><code class="docutils literal notranslate"><span class="pre">DeltaGPModel.check_rho()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel.delta_targets"><code class="docutils literal notranslate"><span class="pre">DeltaGPModel.delta_targets()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel.condition_on_residuals"><code class="docutils literal notranslate"><span class="pre">DeltaGPModel.condition_on_residuals()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel.posterior"><code class="docutils literal notranslate"><span class="pre">DeltaGPModel.posterior()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel.training"><code class="docutils literal notranslate"><span class="pre">DeltaGPModel.training</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.mean_var_of_fidelity_i"><code class="docutils literal notranslate"><span class="pre">mean_var_of_fidelity_i()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.samples_of_fidelity_i"><code class="docutils literal notranslate"><span class="pre">samples_of_fidelity_i()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.loo_function"><code class="docutils literal notranslate"><span class="pre">loo_function()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.virtual_lower_data"><code class="docutils literal notranslate"><span class="pre">virtual_lower_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.condition_mf_model"><code class="docutils literal notranslate"><span class="pre">condition_mf_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.analytical_loo"><code class="docutils literal notranslate"><span class="pre">analytical_loo()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.get_fitted_model"><code class="docutils literal notranslate"><span class="pre">get_fitted_model()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.fit_model_delta"><code class="docutils literal notranslate"><span class="pre">fit_model_delta()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.mfgp.Binary_GPModel"><code class="docutils literal notranslate"><span class="pre">Binary_GPModel</span></code></a><ul>
@@ -135,11 +141,24 @@
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="mfscbo.mfgp.DeltaGPModel.check_rho">
+<span class="sig-name descname"><span class="pre">check_rho</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfgp.html#DeltaGPModel.check_rho"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfgp.DeltaGPModel.check_rho" title="Permalink to this definition"></a></dt>
+<dd><p>Warn if rho is too close to zero.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="mfscbo.mfgp.DeltaGPModel.delta_targets">
 <span class="sig-name descname"><span class="pre">delta_targets</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfgp.html#DeltaGPModel.delta_targets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfgp.DeltaGPModel.delta_targets" title="Permalink to this definition"></a></dt>
 <dd><p>Compute the delta targets for training, i.e., Y_fid_i - rho * Y_fid_im1.
 :returns: Delta targets of shape (n_i, 1)
 :rtype: torch.Tensor</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mfscbo.mfgp.DeltaGPModel.condition_on_residuals">
+<span class="sig-name descname"><span class="pre">condition_on_residuals</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfgp.html#DeltaGPModel.condition_on_residuals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfgp.DeltaGPModel.condition_on_residuals" title="Permalink to this definition"></a></dt>
+<dd><p>Set the training targets of the GP to the delta targets (with the current rho), so that the posterior is conditioned on them.
+To call again each time rho, Y_fid_i or Y_fid_im1 change.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -213,6 +232,111 @@ If False, returns the latent function posterior. Defaults to True.</p></li>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.mfgp.loo_function">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.mfgp.</span></span><span class="sig-name descname"><span class="pre">loo_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">K</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_constant</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfgp.html#loo_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfgp.loo_function" title="Permalink to this definition"></a></dt>
+<dd><p>leave-one-out mean and variance of a GP with fixed hyperparameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>K</strong> (<em>torch.Tensor</em>) – Covariance matrix of the observations, noise included, of shape (n_pts, n_pts)</p></li>
+<li><p><strong>y</strong> (<em>torch.Tensor</em>) – Observations of shape (n_pts,)</p></li>
+<li><p><strong>mean_constant</strong> (<em>torch.Tensor</em><em> or </em><em>float</em>) – Constant prior mean of the GP</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>(LOO means of shape (n_pts,), LOO variances of shape (n_pts,)).</dt><dd><p>The variance is the one of a noisy observation because K contains the noise.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(torch.Tensor, torch.Tensor)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.mfgp.virtual_lower_data">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.mfgp.</span></span><span class="sig-name descname"><span class="pre">virtual_lower_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_fid_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_fid_im1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_fid_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_fid_im1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_mean</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfgp.html#virtual_lower_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfgp.virtual_lower_data" title="Permalink to this definition"></a></dt>
+<dd><p>Lower fidelity values at the points of fidelity i.The points are ordered as [nested points ; non-nested points].</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X_fid_i</strong> (<em>torch.Tensor</em>) – Points at fidelity i of shape (n_i, dim)</p></li>
+<li><p><strong>X_fid_im1</strong> (<em>torch.Tensor</em>) – Points at fidelity i-1 of shape (n_im1, dim)</p></li>
+<li><p><strong>Y_fid_i</strong> (<em>torch.Tensor</em>) – Values at fidelity i of shape (n_i, 1)</p></li>
+<li><p><strong>Y_fid_im1</strong> (<em>torch.Tensor</em>) – Values at fidelity i-1 of shape (n_im1, 1)</p></li>
+<li><p><strong>lower_mean</strong> (<em>callable</em>) – Predicted mean of fidelity i-1, takes points of shape (n, dim) and returns shape (n,)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>(ordered X_fid_i of shape (n_i, dim), ordered Y_fid_i of shape (n_i, 1),</dt><dd><p>virtual Y_fid_im1 of shape (n_i, 1), order : indices in X_fid_i of shape (n_i,))</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.mfgp.condition_mf_model">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.mfgp.</span></span><span class="sig-name descname"><span class="pre">condition_mf_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">models_delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">up_to_fid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfgp.html#condition_mf_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfgp.condition_mf_model" title="Permalink to this definition"></a></dt>
+<dd><p>Condition copies of the multi-fidelity GP models on new data, the hyperparameters, rhos and standardization fixed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_low</strong> (<em>botorch.models.SingleTaskGP</em>) – Fitted low fidelity GP model</p></li>
+<li><p><strong>models_delta</strong> (<em>List</em><em>[</em><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel" title="mfscbo.mfgp.DeltaGPModel"><em>DeltaGPModel</em></a><em>]</em>) – Fitted delta GP models : [None, delta_1, delta_2, …, delta_S]</p></li>
+<li><p><strong>rhos</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – List of rho values for each fidelity : [1, rho_1, rho_2, …, rho_S]</p></li>
+<li><p><strong>X_list</strong> (<em>List</em><em>[</em><em>torch.Tensor</em><em>]</em>) – Points per fidelity of shape (n_i, dim+1) (last column is the fidelity)</p></li>
+<li><p><strong>Y_list</strong> (<em>List</em><em>[</em><em>torch.Tensor</em><em>]</em>) – Values per fidelity of shape (n_i, 1)</p></li>
+<li><p><strong>up_to_fid</strong> (<em>int</em>) – Highest fidelity level to condition</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(conditioned low fidelity model, [None, conditioned delta_1, …, conditioned delta_up_to_fid])</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(botorch.models.SingleTaskGP, List[<a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel" title="mfscbo.mfgp.DeltaGPModel">DeltaGPModel</a>])</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.mfgp.analytical_loo">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.mfgp.</span></span><span class="sig-name descname"><span class="pre">analytical_loo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">models_delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trains_X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trains_Y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_batch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Y_batch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/mfgp.html#analytical_loo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.mfgp.analytical_loo" title="Permalink to this definition"></a></dt>
+<dd><p>Analytical LOO mean and variance at the point idx of the batch, for its fidelity fid.
+The full model is trained on trains ∪ batch with the hyperparameters and rhos of the fitted models held fixed,
+then the point idx is removed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_low</strong> (<em>botorch.models.SingleTaskGP</em>) – Fitted low fidelity GP model</p></li>
+<li><p><strong>models_delta</strong> (<em>List</em><em>[</em><a class="reference internal" href="#mfscbo.mfgp.DeltaGPModel" title="mfscbo.mfgp.DeltaGPModel"><em>DeltaGPModel</em></a><em>]</em>) – Fitted delta GP models : [None, delta_1, delta_2, …, delta_S]</p></li>
+<li><p><strong>rhos</strong> (<em>List</em><em>[</em><em>float</em><em>]</em>) – List of rho values for each fidelity : [1, rho_1, rho_2, …, rho_S]</p></li>
+<li><p><strong>trains_X</strong> (<em>List</em><em>[</em><em>torch.Tensor</em><em>]</em>) – Training points per fidelity of shape (n_i, dim+1) (last column is the fidelity)</p></li>
+<li><p><strong>trains_Y</strong> (<em>List</em><em>[</em><em>torch.Tensor</em><em>]</em>) – Training values per fidelity of shape (n_i, 1)</p></li>
+<li><p><strong>X_batch</strong> (<em>torch.Tensor</em>) – Batch points of shape (batch_size, dim+1) (last column is the fidelity)</p></li>
+<li><p><strong>Y_batch</strong> (<em>torch.Tensor</em>) – Batch values of shape (batch_size, 1)</p></li>
+<li><p><strong>idx</strong> (<em>int</em>) – Index in the batch of the point to leave out</p></li>
+<li><p><strong>fid</strong> (<em>int</em>) – Fidelity level of the point idx</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(LOO mean, LOO variance) at the point idx</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(torch.Tensor, torch.Tensor)</p>
 </dd>
 </dl>
 </dd></dl>

@@ -63,6 +63,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.utils.eval_fun_unnormalized"><code class="docutils literal notranslate"><span class="pre">eval_fun_unnormalized()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.utils.get_gp_info"><code class="docutils literal notranslate"><span class="pre">get_gp_info()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mfscbo.utils.ensure_list"><code class="docutils literal notranslate"><span class="pre">ensure_list()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mfscbo.utils.out_and_in"><code class="docutils literal notranslate"><span class="pre">out_and_in()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="plot.html">plot module</a></li>
@@ -176,6 +177,31 @@
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mfscbo.utils.out_and_in">
+<span class="sig-prename descclassname"><span class="pre">mfscbo.utils.</span></span><span class="sig-name descname"><span class="pre">out_and_in</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X_im1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rtol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-08</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/mfscbo/utils.html#out_and_in"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mfscbo.utils.out_and_in" title="Permalink to this definition"></a></dt>
+<dd><dl class="simple">
+<dt>Separate points X_i into points that are also in X_im1 and points that are not.</dt><dd><p>The comparison is done by using : ||x - y|| &lt;= atol + rtol * ||y|| =&gt; ||x-y||/||y|| &lt;= rtol + atol/||y||</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X_i</strong> (<em>torch.Tensor</em>) – Points to separate of shape (n_i, dim)</p></li>
+<li><p><strong>X_im1</strong> (<em>torch.Tensor</em>) – Reference points of shape (n_im1, dim)</p></li>
+<li><p><strong>rtol</strong> (<em>float</em><em>, </em><em>optional</em>) – Relative tolerance. Defaults to 1e-9.</p></li>
+<li><p><strong>atol</strong> (<em>float</em><em>, </em><em>optional</em>) – Absolute tolerance. Defaults to 1e-8.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(indices out according to X_im1 for i, indices in according to X_im1 for i, indices in according to X_im1 for im1)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Tuple[torch.Tensor, torch.Tensor, torch.Tensor]</p>
 </dd>
 </dl>
 </dd></dl>

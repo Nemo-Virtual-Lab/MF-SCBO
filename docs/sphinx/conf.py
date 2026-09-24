@@ -35,6 +35,9 @@ extensions = [
 # Notebook options
 nb_execution_mode = "off"
 
+# Enable $...$ and \begin{align*} math in notebook markdown
+myst_enable_extensions = ["dollarmath", "amsmath"]
+
 # Napoleon options (improves parsing of Google/NumPy docstrings)
 napoleon_google_docstring = True
 napoleon_numpy_docstring = True
@@ -53,17 +56,11 @@ autodoc_default_options = {
 
 templates_path = ['_templates']
 
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '**/.ipynb_checkpoints']
 
 # -- HTML output -------------------------------------------------------------
 
 
-html_theme_options = {
-    "navigation_with_keys": True,
-    "source_repository": "https://github.com/Nemo-Virtual-Lab/MF-SCBO/",
-    "source_branch": "main",
-    "source_directory": "docs/sphinx/",
-}
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']

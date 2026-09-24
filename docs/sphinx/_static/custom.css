@@ -1,33 +1,23 @@
-
-/* Output area (main fix) */
-div.nboutput .output_area,
-div.nboutput .output_text,
-div.nboutput .output_stream {
-    max-height: 500px;
+/* Notebook outputs (myst-nb): scrollable box */
+div.cell_output div.output pre {
+    max-height: 400px;
     overflow-y: auto;
-    border: 1px solid #e0e0e0;
-    padding: 8px;
 }
 
-/* Large dataframes / pandas tables */
-div.nboutput table {
+/* Tables */
+div.cell_output table {
     display: block;
     max-height: 500px;
     overflow: auto;
 }
 
-/* Matplotlib figures (prevents huge vertical stretching) */
-div.nboutput .output_area img {
+/* Figures */
+div.cell_output img {
     max-height: 500px;
     width: auto;
     display: block;
     margin: auto;
 }
-
-
-
-
-
 
 /* Global link color */
 a,

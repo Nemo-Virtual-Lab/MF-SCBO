@@ -10,8 +10,8 @@ import gpytorch
 from botorch.models import ModelListGP
 from botorch.utils.transforms import unnormalize
 
-from mfscbo.utils import Print_log_and_console, get_gp_info
-from mfscbo.mfgp import DeltaGPModel, mean_var_of_fidelity_i, samples_of_fidelity_i, get_fitted_model, fit_model_delta
+from mfscbo.utils import Print_log_and_console, get_gp_info, out_and_in
+from mfscbo.mfgp import DeltaGPModel, mean_var_of_fidelity_i, samples_of_fidelity_i, get_fitted_model, fit_model_delta, analytical_loo
 from mfscbo.scbo_state import ScboState, update_state, get_best_index_for_batch
 
 
@@ -518,6 +518,20 @@ class ScboMfOptimizer:
             print("Generated fidelities :")
             print(generated_fidelities)
            
+    def _print_loo(self, fidelity, y_center, mean, var, error, conf_inter_95):
+        """ Print the LOO criterion of the center of the trust region.
+        Args:
+            fidelity (int): Fidelity level of the center of the trust region.
+            y_center (float): Evaluated value of the center of the trust region at this fidelity.
+            mean (float): LOO mean at the center of the trust region.
+            var (float): LOO variance at the center of the trust region.
+            error (float): LOO error |mean - y_center|.
+            conf_inter_95 (float): Half width of the 95% confidence interval, 1.96 * sqrt(var).
+        """
+        decision = "not reliable" if error > conf_inter_95 else "reliable"
+        print(f"================= LOO of the trust region center : fidelity {fidelity}, y = {y_center:.6e} =================")
+        print(f"================= LOO mean : {mean:.6e}, LOO var : {var:.3e}, error : {error:.3e}, conf_inter_95 : {conf_inter_95:.3e} -> {decision} =================")
+
     def _print_gp_parameters(self, model, fidelity, verbose=True):
         """ Print the parameters of the GP model.
         Args:
@@ -1011,78 +1025,26 @@ class ScboMfOptimizer:
                     index_center_tr_region = torch.where((X_next[:,:-1] == center_tr_region).all(dim=1))[0]
                     if index_center_tr_region.shape[0] != 0 :
                         fid_center_tr_region = int(X_next[index_center_tr_region[0], -1].item())
-                        train_X_loo = [None for _ in self.fidelities]
-                        train_Y_loo = [None for _ in self.fidelities]
-                        for fid in self.fidelities :
-                                train_X_loo[fid] = self.trains_X[fid]
-                                train_Y_loo[fid] = self.trains_Y[fid]
-                        #add X_next and Y_next except the center of the trust region to the training data
-                        for i in range(X_next.shape[0]) :
-                            if i != index_center_tr_region[0] :
-                                fid = int(X_next[i,-1].item())
-                                train_X_loo[fid] = torch.cat((train_X_loo[fid], X_next[i,:][None,:]), dim=0)
-                                train_Y_loo[fid] = torch.cat((train_Y_loo[fid], Y_next[i,:][None,:]), dim=0)
-                    
-                        #fit gps and constraints 
-                        model_low_loo = get_fitted_model(train_X_loo[0][:, :-1], train_Y_loo[0], noise_interval, martern_nu, lengthscale_interval)
-                        models_delta_loo = [None]
-                        rhos_loo = [None for _ in self.fidelities]
-                        for fid in self.fidelities :
-                            if fid != 0 :
-                                X_fid_i_loo = train_X_loo[fid][:, :-1]
-                                X_fid_im1_loo = train_X_loo[fid - 1][:, :-1]
-                                Y_fid_i_loo = train_Y_loo[fid]
-                                Y_fid_im1_loo = train_Y_loo[fid - 1]
-
-                                #get indices of X_fid_i that are not in X_fid_im1
-                                mask_out_of_fid_i_loo, mask_in_of_fid_i_loo, mask_in_of_fid_im1_loo = out_and_in(X_fid_i_loo, X_fid_im1_loo)
-
-                                #get Y_fid_im1
-                                Y_fid_im1_in_fid_i_loo = Y_fid_im1_loo[mask_in_of_fid_im1_loo]
-                                Y_fid_im1_out_fid_i_pred_loo = mean_var_of_fidelity_i(model_low_loo, models_delta_loo, self.rhos, X_fid_i_loo[mask_out_of_fid_i_loo], fid - 1)[0]
-                                Y_fid_im1_out_fid_i_pred_loo = Y_fid_im1_out_fid_i_pred_loo[:,None]
-
-                                #concatenate the two parts to get Y_fid_im1 as high fidelity points
-                                virtual_Y_fid_im1_loo = torch.cat((Y_fid_im1_in_fid_i_loo, Y_fid_im1_out_fid_i_pred_loo), dim=0)
-                                virtual_X_fid_im1_loo = torch.cat((X_fid_i_loo[mask_in_of_fid_i_loo], X_fid_i_loo[mask_out_of_fid_i_loo]), dim=0)
-                                Y_fid_i_ordered_loo = torch.cat((Y_fid_i_loo[mask_in_of_fid_i_loo], Y_fid_i_loo[mask_out_of_fid_i_loo]), dim=0)
-
-                                #delta model fit
-                                model_delta_loo = DeltaGPModel(virtual_X_fid_im1_loo, #all in X_fid_i points
-                                                        Y_fid_i_ordered_loo,
-                                                        virtual_Y_fid_im1_loo,
-                                                        covar_module=gpytorch.kernels.ScaleKernel(
-                                                                gpytorch.kernels.MaternKernel(
-                                                                    nu=2.5,
-                                                                    ard_num_dims=self.dim,
-                                                                    lengthscale_constraint=gpytorch.constraints.Interval(0.005, 4.0),
-                                                                )
-                                                            ),
-                                                            likelihood=gpytorch.likelihoods.GaussianLikelihood(
-                                                            noise_constraint=gpytorch.constraints.Interval(1e-6, 1e-3)
-                                                        )
-                                                        , torchargs=self.torchargs
-                                                        )
-                                fit_model_delta(model_delta_loo, virtual_X_fid_im1_loo)
-
-                                rhos_loo[fid] = model_delta_loo.rho.item()
-                                models_delta_loo.append(model_delta_loo)
-                        
-                        #error loo betwenn predicted value of models_loo and the true value of the center of the trust region
-                        pred_center_tr_region, var_center_tr_region = mean_var_of_fidelity_i(model_low_loo, models_delta_loo, rhos_loo, state.best_xvalue[None,:], fid_center_tr_region)#compliqué de fixer car il faut que le modèle soit fit, ce qui se fait au début de la boucle
+                        #closed form LOO of the center of the trust region, the hyperparameters and rhos of model_low and models_delta held fixed
+                        pred_center_tr_region, var_center_tr_region = analytical_loo(model_low, models_delta, self.rhos, self.trains_X, self.trains_Y, X_next, Y_next,
+                                                                                     int(index_center_tr_region[0].item()), fid_center_tr_region)
                         conf_inter_95_loo = 1.96 * torch.sqrt(var_center_tr_region).item()
-                        error_loo = torch.abs(pred_center_tr_region - self.eval_objectives[fid_center_tr_region](state.best_xvalue[None,:])[0]).item()
-                        print(f"================= error : {error_loo} =================")
-                        print(f"================= conf_inter_95 : {conf_inter_95_loo} =================")
+                        error_loo = torch.abs(pred_center_tr_region - Y_next[index_center_tr_region[0], 0]).item()
+                        self._print_loo(fidelity=fid_center_tr_region,
+                                        y_center=Y_next[index_center_tr_region[0], 0].item(),
+                                        mean=pred_center_tr_region.item(),
+                                        var=var_center_tr_region.item(),
+                                        error=error_loo,
+                                        conf_inter_95=conf_inter_95_loo)
                         if error_loo > conf_inter_95_loo:
                             print("ADD HIGH FID POINT")
                             #we evaluate the true value of the center with the high fidelity function and update the state 
-                            true_value_center = self.eval_objectives[-1](state.best_xvalue[None,:])[0]
+                            true_value_center = self.eval_objectives[-1](state_inter.best_xvalue[None,:])[0]
                             #augment X_next, Y_next, C_next  
                             #X_next with high fidelity point
-                            X_next = torch.cat((X_next, torch.cat((state.best_xvalue[None,:], torch.tensor([[self.fidelities[-1]]], **self.torchargs)), dim=1)), dim=0)
+                            X_next = torch.cat((X_next, torch.cat((state_inter.best_xvalue[None,:], torch.tensor([[self.fidelities[-1]]], **self.torchargs)), dim=1)), dim=0)
                             Y_next = torch.cat((Y_next, true_value_center[None,:]), dim=0)
-                            C_next = torch.cat((C_next, self.constraints(state.best_xvalue[None,:])), dim=0)
+                            C_next = torch.cat((C_next, self.constraints(state_inter.best_xvalue[None,:])), dim=0)
                             
                             #now pred
                             Y_high_pred = mean_var_of_fidelity_i(model_low, models_delta, self.rhos, X_next[:,:-1], self.fidelities[-1])[0]
@@ -1097,6 +1059,8 @@ class ScboMfOptimizer:
                             
                             #augment n_fid_points for the high fidelity point
                             n_fid_points[-1] += 1
+                        else : 
+                            state = copy.deepcopy(state_inter)
                     else :
                         state = copy.deepcopy(state_inter)
                             

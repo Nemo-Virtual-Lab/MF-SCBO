@@ -160,6 +160,128 @@ def samples_of_fidelity_i(model_low, models_delta, rhos, X, fid, n_samples):
             samples = rho_i * samples + delta_i_samples
         return samples
 
+def loo_function(K, y, mean_constant):
+    """leave-one-out mean and variance of a GP with fixed hyperparameters.
+
+    Args:
+        K (torch.Tensor): Covariance matrix of the observations, noise included, of shape (n_pts, n_pts)
+        y (torch.Tensor): Observations of shape (n_pts,)
+        mean_constant (torch.Tensor or float): Constant prior mean of the GP
+
+    Returns:
+        (torch.Tensor, torch.Tensor): (LOO means of shape (n_pts,), LOO variances of shape (n_pts,)).
+                                      The variance is the one of a noisy observation because K contains the noise.
+    """
+    L = psd_safe_cholesky(K) 
+    alpha = torch.cholesky_solve((y - mean_constant)[:, None], L).squeeze(-1) #K^-1 (y - m), in case mean_constant not null
+    L_inv = torch.linalg.solve_triangular(L, torch.eye(K.shape[0], dtype=K.dtype, device=K.device), upper=False)
+    diag_K_inv = (L_inv ** 2).sum(dim=0) #(K^-1)_ii = sum_k (L^-1)_ki^2
+    return y - alpha / diag_K_inv, 1.0 / diag_K_inv
+
+def virtual_lower_data(X_fid_i, X_fid_im1, Y_fid_i, Y_fid_im1, lower_mean):
+    """Lower fidelity values at the points of fidelity i.The points are ordered as [nested points ; non-nested points].
+
+    Args:
+        X_fid_i (torch.Tensor): Points at fidelity i of shape (n_i, dim)
+        X_fid_im1 (torch.Tensor): Points at fidelity i-1 of shape (n_im1, dim)
+        Y_fid_i (torch.Tensor): Values at fidelity i of shape (n_i, 1)
+        Y_fid_im1 (torch.Tensor): Values at fidelity i-1 of shape (n_im1, 1)
+        lower_mean (callable): Predicted mean of fidelity i-1, takes points of shape (n, dim) and returns shape (n,)
+
+    Returns:
+        (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor): (ordered X_fid_i of shape (n_i, dim), ordered Y_fid_i of shape (n_i, 1),
+                                                                  virtual Y_fid_im1 of shape (n_i, 1), order : indices in X_fid_i of shape (n_i,))
+    """
+    mask_out_of_fid_i, mask_in_of_fid_i, mask_in_of_fid_im1 = out_and_in(X_fid_i, X_fid_im1)
+    order = torch.cat((torch.where(mask_in_of_fid_i)[0], torch.where(mask_out_of_fid_i)[0]))
+    virtual_Y_fid_im1 = torch.cat((Y_fid_im1[mask_in_of_fid_im1], lower_mean(X_fid_i[mask_out_of_fid_i])[:, None]), dim=0)
+    return X_fid_i[order], Y_fid_i[order], virtual_Y_fid_im1, order
+
+def condition_mf_model(model_low, models_delta, rhos, X_list, Y_list, up_to_fid):
+    """Condition copies of the multi-fidelity GP models on new data, the hyperparameters, rhos and standardization fixed.
+
+    Args:
+        model_low (botorch.models.SingleTaskGP): Fitted low fidelity GP model
+        models_delta (List[DeltaGPModel]): Fitted delta GP models : [None, delta_1, delta_2, ..., delta_S]
+        rhos (List[float]): List of rho values for each fidelity : [1, rho_1, rho_2, ..., rho_S]
+        X_list (List[torch.Tensor]): Points per fidelity of shape (n_i, dim+1) (last column is the fidelity)
+        Y_list (List[torch.Tensor]): Values per fidelity of shape (n_i, 1)
+        up_to_fid (int): Highest fidelity level to condition
+
+    Returns:
+        (botorch.models.SingleTaskGP, List[DeltaGPModel]): (conditioned low fidelity model, [None, conditioned delta_1, ..., conditioned delta_up_to_fid])
+    """
+    model_low_c = copy.deepcopy(model_low).eval()
+    model_low_c.set_train_data(X_list[0][:, :-1], model_low_c.outcome_transform(Y_list[0])[0].squeeze(-1), strict=False)
+
+    models_delta_c = [None]
+    for fid in range(1, up_to_fid + 1):
+        lower_mean = lambda X: mean_var_of_fidelity_i(model_low_c, models_delta_c, rhos, X, fid - 1)[0]
+        virtual_X, Y_fid_i_ordered, virtual_Y_fid_im1, _ = virtual_lower_data(X_list[fid][:, :-1], X_list[fid - 1][:, :-1],
+                                                                              Y_list[fid], Y_list[fid - 1], lower_mean)
+        model_delta_c = copy.deepcopy(models_delta[fid])
+        model_delta_c.Y_fid_i = Y_fid_i_ordered.clone().detach()
+        model_delta_c.Y_fid_im1 = virtual_Y_fid_im1.clone().detach()
+        model_delta_c.set_train_data(inputs=virtual_X, strict=False)
+        model_delta_c.condition_on_residuals()
+        models_delta_c.append(model_delta_c)
+
+    return model_low_c, models_delta_c
+
+def analytical_loo(model_low, models_delta, rhos, trains_X, trains_Y, X_batch, Y_batch, idx, fid):
+    """Analytical LOO mean and variance at the point idx of the batch, for its fidelity fid.
+    The full model is trained on trains ∪ batch with the hyperparameters and rhos of the fitted models held fixed,
+    then the point idx is removed.
+
+    Args:
+        model_low (botorch.models.SingleTaskGP): Fitted low fidelity GP model
+        models_delta (List[DeltaGPModel]): Fitted delta GP models : [None, delta_1, delta_2, ..., delta_S]
+        rhos (List[float]): List of rho values for each fidelity : [1, rho_1, rho_2, ..., rho_S]
+        trains_X (List[torch.Tensor]): Training points per fidelity of shape (n_i, dim+1) (last column is the fidelity)
+        trains_Y (List[torch.Tensor]): Training values per fidelity of shape (n_i, 1)
+        X_batch (torch.Tensor): Batch points of shape (batch_size, dim+1) (last column is the fidelity)
+        Y_batch (torch.Tensor): Batch values of shape (batch_size, 1)
+        idx (int): Index in the batch of the point to leave out
+        fid (int): Fidelity level of the point idx
+
+    Returns:
+        (torch.Tensor, torch.Tensor): (LOO mean, LOO variance) at the point idx
+    """
+    # add the batch to the training data, for all fidelities
+    X_full = [torch.cat((trains_X[i], X_batch[X_batch[:, -1] == i]), dim=0) for i in range(fid + 1)]
+    Y_full = [torch.cat((trains_Y[i], Y_batch[X_batch[:, -1] == i]), dim=0) for i in range(fid + 1)]
+    pos = trains_X[fid].shape[0] + int((X_batch[:idx, -1] == fid).sum().item())
+
+    model_low.eval()
+
+    if fid == 0 :
+        X_0 = X_full[0][:, :-1]
+        y_std = model_low.outcome_transform(Y_full[0])[0].squeeze(-1) #standardization of the fitted model (fixed)
+        noise = model_low.likelihood.noise
+        K = model_low.covar_module(X_0).to_dense() + noise * torch.eye(X_0.shape[0], dtype=X_0.dtype, device=X_0.device)
+        mean_loo, var_loo = loo_function(K, y_std, model_low.mean_module.constant)
+        stdv = model_low.outcome_transform.stdvs.squeeze()
+        mean = model_low.outcome_transform.means.squeeze() + stdv * mean_loo[pos]
+        var = stdv ** 2 * (var_loo[pos] - noise.squeeze()) 
+        return mean, var
+
+    # lower fidelities conditioned on data and hyperparameters fixed 
+    model_low_full, models_delta_full = condition_mf_model(model_low, models_delta, rhos, X_full, Y_full, fid - 1)
+    lower_mean = lambda X: mean_var_of_fidelity_i(model_low_full, models_delta_full, rhos, X, fid - 1)[0]
+    virtual_X, Y_fid_ordered, virtual_Y_fid_im1, order = virtual_lower_data(X_full[fid][:, :-1], X_full[fid - 1][:, :-1],
+                                                                            Y_full[fid], Y_full[fid - 1], lower_mean)
+    pos = int(torch.where(order == pos)[0].item())
+
+    # LOO of the delta model on the residuals r = y - rho * y_virtual
+    rho = rhos[fid]
+    model_delta = models_delta[fid]
+    r = (Y_fid_ordered - rho * virtual_Y_fid_im1).squeeze(-1)
+    K = model_delta.covar_module(virtual_X).to_dense() + model_delta.likelihood.noise * torch.eye(virtual_X.shape[0], dtype=virtual_X.dtype, device=virtual_X.device)
+    mean_delta_loo, var_delta_loo = loo_function(K, r, model_delta.mean_module.constant)
+
+    mean_low, var_low = mean_var_of_fidelity_i(model_low_full, models_delta_full, rhos, virtual_X[pos][None, :], fid - 1)
+    return rho * mean_low.squeeze() + mean_delta_loo[pos], rho ** 2 * var_low.squeeze() + var_delta_loo[pos]
+
 def get_fitted_model(X, Y, noise_interval, matern_nu, lengthscale_interval, is_binary=False):
     """Fit a GP model to data (X, Y).
 

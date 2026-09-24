@@ -1,4 +1,5 @@
 
+import copy
 import torch
 import gpytorch
 from torch.nn import Parameter
@@ -11,6 +12,8 @@ from gpytorch.models import ApproximateGP
 from gpytorch.variational import VariationalStrategy, CholeskyVariationalDistribution
 from botorch.models.gpytorch import GPyTorchModel
 import warnings
+from gpytorch.utils.cholesky import psd_safe_cholesky
+from mfscbo.utils import out_and_in
 
 
 
@@ -43,6 +46,7 @@ class DeltaGPModel(gpytorch.models.ExactGP):
   
         self.mean_module = gpytorch.means.ConstantMean().to(**torchargs)
         self.covar_module = covar_module.to(**torchargs)
+        self.condition_on_residuals()
 
     @property
     def rho(self):
@@ -76,6 +80,12 @@ class DeltaGPModel(gpytorch.models.ExactGP):
         """
         return self.Y_fid_i - self.rho * self.Y_fid_im1
 
+    def condition_on_residuals(self):
+        """Set the training targets of the GP to the delta targets (with the current rho), so that the posterior is conditioned on them.
+        To call again each time rho, Y_fid_i or Y_fid_im1 change.
+        """
+        self.set_train_data(targets=self.delta_targets().squeeze(-1).detach(), strict=False)
+
     def posterior(self, X_new, likelihood=True):
         """Compute the posterior predictive distribution at X_new.
 
@@ -90,8 +100,8 @@ class DeltaGPModel(gpytorch.models.ExactGP):
         self.eval()
         if likelihood:
             self.likelihood.eval()
-        with torch.no_grad(), gpytorch.settings.fast_pred_var():
-            mvn = self.forward(X_new)
+        with torch.no_grad():
+            mvn = self(X_new) #posterior conditioned on the delta targets
             if likelihood:
                 mvn = self.likelihood(mvn)
         return mvn

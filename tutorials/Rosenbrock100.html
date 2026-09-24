@@ -21,6 +21,8 @@
         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/sphinx_highlight.js"></script>
+        <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -89,20 +91,22 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="rosenbrock100">
+  <section class="tex2jax_ignore mathjax_ignore" id="rosenbrock100">
 <h1>Rosenbrock100<a class="headerlink" href="#rosenbrock100" title="Permalink to this heading"></a></h1>
-<p>The Rosenbrock function, also known as the Banana function, is a classical benchmark in gradient-based optimization. Its global minimum is located at $\boldsymbol{x}^<em>=\begin{bmatrix}
-1 &amp; \ldots &amp; 1
-\end{bmatrix}^\top$ where the function value is zero. The minimum lies inside a parabolic shaped flat valley, which makes convergence difficult, particularly in high-dimensional settings. Note that there is also local minimums. The computational domain is defined as $\Omega=[-2,2]^d$ with $d=100$. Three fidelity levels are considered defined by
-\begin{align</em>}
-f^{(2)}(\boldsymbol{x})&amp;=\sum_{i=1}^{d-1}100(x_{i+1}-x_i^2)^2+(1-x_i)^2,\
-f^{(1)}(\boldsymbol{x})&amp;=\sum_{i=1}^{d-1}50(x_{i+1}-x_i^2)^2+(-2-x_i)^2-0.5\sum_{i=1}^d x_i,\
+<p>The Rosenbrock function, also known as the Banana function, is a classical benchmark in gradient-based optimization. Its global minimum is located at <span class="math notranslate nohighlight">\(\boldsymbol{x}^*=\begin{bmatrix}
+    1 &amp; \ldots &amp; 1
+\end{bmatrix}^\top\)</span> where the function value is zero. The minimum lies inside a parabolic shaped flat valley, which makes convergence difficult, particularly in high-dimensional settings. Note that there is also local minimums. The computational domain is defined as <span class="math notranslate nohighlight">\(\Omega=[-2,2]^d\)</span> with <span class="math notranslate nohighlight">\(d=100\)</span>. Three fidelity levels are considered defined by</p>
+<div class="amsmath math notranslate nohighlight">
+\[\begin{align*}
+f^{(2)}(\boldsymbol{x})&amp;=\sum_{i=1}^{d-1}100(x_{i+1}-x_i^2)^2+(1-x_i)^2,\\
+f^{(1)}(\boldsymbol{x})&amp;=\sum_{i=1}^{d-1}50(x_{i+1}-x_i^2)^2+(-2-x_i)^2-0.5\sum_{i=1}^d x_i,\\ 
 f^{(0)}(\boldsymbol{x})&amp;=\frac{f^{(2)}(\boldsymbol{x})-4-0.5\sum_{i=1}^dx_i}{10+0.25\sum_{i=1}^dx_i},
-\end{align*}
-where $f^{(2)}$ is the classical Rosenbrock function. \Cref{fig:rosenbrock_illu} illustrates the three fidelities level in the two-dimensional case. The constraints considered are :
-\begin{equation*}
-c_1(\boldsymbol{x})=-\sum_{i=1}^d \cos(x_i)+1\leq 0, \qquad c_2(\boldsymbol{x})=\sum_{i=1}^dx_i\leq0.
-\end{equation*}</p>
+\end{align*}\]</div>
+<p>where <span class="math notranslate nohighlight">\(f^{(2)}\)</span> is the classical Rosenbrock function. \Cref{fig:rosenbrock_illu} illustrates the three fidelities level in the two-dimensional case. The constraints considered are :</p>
+<div class="amsmath math notranslate nohighlight">
+\[\begin{equation*}
+    c_1(\boldsymbol{x})=-\sum_{i=1}^d \cos(x_i)+1\leq 0, \qquad c_2(\boldsymbol{x})=\sum_{i=1}^dx_i\leq0.
+\end{equation*}\]</div>
 <section id="imports">
 <h2>Imports<a class="headerlink" href="#imports" title="Permalink to this heading"></a></h2>
 <div class="cell docutils container">

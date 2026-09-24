@@ -21,6 +21,8 @@
         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/sphinx_highlight.js"></script>
+        <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -90,47 +92,50 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="hartmann6">
+  <section class="tex2jax_ignore mathjax_ignore" id="hartmann6">
 <h1>Hartmann6<a class="headerlink" href="#hartmann6" title="Permalink to this heading"></a></h1>
-<p>The Hartmann function family is commonly used to benchmark optimization algorithms. Here, the six-dimensional case is considered, which has six local minima. The global minimum is located at $\boldsymbol{x}^{<em>}=\begin{bmatrix}0.20169 &amp;0150011 &amp;0.476874 &amp;0.275332 &amp;0.311652&amp;0.6573\end{bmatrix}^\top$ where the function value is $-3.32237$. The computational domain is defined as $\Omega=[0,1]^6$. The multi-fidelity formulation studied in \cite{kandasamy2019} defines the $s$-th fidelity level as
-\begin{equation</em>}
-f^{(s)}(\boldsymbol{x}) = \sum_{i=1}^4 \alpha_i^{(s)}
-\exp\left(-\sum_{j=1}^6 A_{ij}(x_j - P_{ij})^2\right),
-\end{equation*}
-where $A, P \in \mathbb{R}^{4 \times 6}$ are fixed matrices defined as
-\begin{equation*}
-A :=
-\begin{bmatrix}
-10 &amp; 3 &amp; 17 &amp; 3.5 &amp; 1.7 &amp; 8 \
-0.05 &amp; 10 &amp; 17 &amp; 0.1 &amp; 8 &amp; 14 \
-3 &amp; 3.5 &amp; 1.7 &amp; 10 &amp; 17 &amp; 8 \
-17 &amp; 8 &amp; 0.05 &amp; 10 &amp; 0.1 &amp; 14
-\end{bmatrix},
-\qquad
-P := 10^{-4}
-\begin{bmatrix}
-1312 &amp; 1696 &amp; 5569 &amp; 124 &amp; 8283 &amp; 5886 \
-2329 &amp; 4135 &amp; 8307 &amp; 3736 &amp; 1004 &amp; 9991 \
-2348 &amp; 1451 &amp; 3522 &amp; 2883 &amp; 3074 &amp; 6650 \
-4047 &amp; 8828 &amp; 8732 &amp; 5743 &amp; 1091 &amp; 381
-\end{bmatrix}.
-\end{equation*}
-The fidelity-dependent parameter vector $\boldsymbol{\alpha}^{(s)}$ is defined as
-\begin{equation*}
-\boldsymbol{\alpha}^{(s)} := \boldsymbol{\alpha} + (S - s)\boldsymbol{\delta},
-\qquad \text{with} \qquad
-\begin{cases}
-\boldsymbol{\alpha} :=
-\begin{bmatrix}
-1 &amp; 1.2 &amp; 3 &amp; 3.2
-\end{bmatrix}^\top, \[0.3em]
-\boldsymbol{\delta} :=
-\begin{bmatrix}
-0.01 &amp; -0.01 &amp; -0.1 &amp; 0.1
-\end{bmatrix}^\top.
-\end{cases}
-\end{equation*}
-Following \cite{letham2019}, a single constraint is imposed to restrict feasible points to lie inside the unit sphere: $|\boldsymbol{x}| \leq 1$.</p>
+<p>The Hartmann function family is commonly used to benchmark optimization algorithms. Here, the six-dimensional case is considered, which has six local minima. The global minimum is located at <span class="math notranslate nohighlight">\(\boldsymbol{x}^{*}=\begin{bmatrix}0.20169 &amp;0.150011 &amp;0.476874 &amp;0.275332 &amp;0.311652&amp;0.6573\end{bmatrix}^\top\)</span> where the function value is <span class="math notranslate nohighlight">\(-3.32237\)</span>. The computational domain is defined as <span class="math notranslate nohighlight">\(\Omega=[0,1]^6\)</span>. The multi-fidelity formulation studied in (Kandasamy et al., 2019) defines the <span class="math notranslate nohighlight">\(s\)</span>-th fidelity level as</p>
+<div class="amsmath math notranslate nohighlight">
+\[\begin{equation*}
+    f^{(s)}(\boldsymbol{x}) = \sum_{i=1}^4 \alpha_i^{(s)} 
+    \exp\left(-\sum_{j=1}^6 A_{ij}(x_j - P_{ij})^2\right),
+\end{equation*}\]</div>
+<p>where <span class="math notranslate nohighlight">\(A, P \in \mathbb{R}^{4 \times 6}\)</span> are fixed matrices defined as</p>
+<div class="amsmath math notranslate nohighlight">
+\[\begin{equation*}
+    A :=
+    \begin{bmatrix}
+    10 &amp; 3 &amp; 17 &amp; 3.5 &amp; 1.7 &amp; 8 \\
+    0.05 &amp; 10 &amp; 17 &amp; 0.1 &amp; 8 &amp; 14 \\
+    3 &amp; 3.5 &amp; 1.7 &amp; 10 &amp; 17 &amp; 8 \\
+    17 &amp; 8 &amp; 0.05 &amp; 10 &amp; 0.1 &amp; 14
+    \end{bmatrix}, 
+    \qquad
+    P := 10^{-4}
+    \begin{bmatrix}
+    1312 &amp; 1696 &amp; 5569 &amp; 124 &amp; 8283 &amp; 5886 \\
+    2329 &amp; 4135 &amp; 8307 &amp; 3736 &amp; 1004 &amp; 9991 \\
+    2348 &amp; 1451 &amp; 3522 &amp; 2883 &amp; 3074 &amp; 6650 \\
+    4047 &amp; 8828 &amp; 8732 &amp; 5743 &amp; 1091 &amp; 381
+    \end{bmatrix}.
+\end{equation*}\]</div>
+<p>The fidelity-dependent parameter vector <span class="math notranslate nohighlight">\(\boldsymbol{\alpha}^{(s)}\)</span> is defined as</p>
+<div class="amsmath math notranslate nohighlight">
+\[\begin{equation*}
+    \boldsymbol{\alpha}^{(s)} := \boldsymbol{\alpha} + (S - s)\boldsymbol{\delta},
+    \qquad \text{with} \qquad
+    \begin{cases}
+    \boldsymbol{\alpha} := 
+    \begin{bmatrix}
+    1 &amp; 1.2 &amp; 3 &amp; 3.2
+    \end{bmatrix}^\top, \\[0.3em]
+    \boldsymbol{\delta} :=
+    \begin{bmatrix}
+    0.01 &amp; -0.01 &amp; -0.1 &amp; 0.1
+    \end{bmatrix}^\top.
+    \end{cases}
+\end{equation*}\]</div>
+<p>Following Letham et al. (2019), a single constraint is imposed to restrict feasible points to lie inside the unit sphere: <span class="math notranslate nohighlight">\(\|\boldsymbol{x}\| \leq 1\)</span>.</p>
 <section id="imports">
 <h2>Imports<a class="headerlink" href="#imports" title="Permalink to this heading"></a></h2>
 <div class="cell docutils container">

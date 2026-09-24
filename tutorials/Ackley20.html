@@ -21,6 +21,8 @@
         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/sphinx_highlight.js"></script>
+        <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -90,32 +92,26 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="ackley20">
+  <section class="tex2jax_ignore mathjax_ignore" id="ackley20">
 <h1>Ackley20<a class="headerlink" href="#ackley20" title="Permalink to this heading"></a></h1>
-<p>The Ackley function is a classical function, proposed by David Ackley, to test the performance of optimization algorithms. Its global minimum is located at the origin where the function value is zero. However, the presence of a huge number of local minima makes the problem very difficult. The computational domain considered is defined as $\Omega =[-5,10]^{d}$ with $d=20$. Two fidelity levels are considered, and given by
-\begin{align*}
-f^{(1)}(\boldsymbol{x}) &amp;= -20 \exp\left(-0.2 \sqrt{\frac{1}{d}} |\boldsymbol{x}|_2 \right)</p>
-<ul class="simple">
-<li><p>\exp\left(\frac{1}{d} \sum_{i=1}^{d} \cos(2\pi x_i)\right)</p></li>
-</ul>
-<ul class="simple">
-<li><p>20 + \exp(1), \
-f^{(0)}(\boldsymbol{x}) &amp;= -22 \exp\left(-0.2 \sqrt{\frac{1.1}{d}} |\boldsymbol{x}|_2 \right)</p></li>
-</ul>
-<ul class="simple">
-<li><p>0.9 \exp\left(\frac{1}{d} \sum_{i=1}^{d} \cos(2\pi x_i)\right)</p></li>
-</ul>
-<ul class="simple">
-<li><p>20 + \exp(1),\
-\end{align*}
-where $f^{(1)}$ is the classical Ackley function. Two constraints are imposed, following :
-\begin{equation*}
+<p>The Ackley function is a classical function, proposed by David Ackley, to test the performance of optimization algorithms. Its global minimum is located at the origin where the function value is zero. However, the presence of a huge number of local minima makes the problem very difficult. The computational domain considered is defined as <span class="math notranslate nohighlight">\(\Omega =[-5,10]^{d}\)</span> with <span class="math notranslate nohighlight">\(d=20\)</span>. Two fidelity levels are considered, and given by</p>
+<div class="amsmath math notranslate nohighlight">
+\[\begin{align*}
+f^{(1)}(\boldsymbol{x}) &amp;= -20 \exp\left(-0.2 \sqrt{\frac{1}{d}} \|\boldsymbol{x}\|_2 \right)
+- \exp\left(\frac{1}{d} \sum_{i=1}^{d} \cos(2\pi x_i)\right)
++ 20 + \exp(1), \\
+f^{(0)}(\boldsymbol{x}) &amp;= -22 \exp\left(-0.2 \sqrt{\frac{1.1}{d}} \|\boldsymbol{x}\|_2 \right)
+- 0.9 \exp\left(\frac{1}{d} \sum_{i=1}^{d} \cos(2\pi x_i)\right)
++ 20 + \exp(1),\\
+\end{align*}\]</div>
+<p>where <span class="math notranslate nohighlight">\(f^{(1)}\)</span> is the classical Ackley function. Two constraints are imposed, following :</p>
+<div class="amsmath math notranslate nohighlight">
+\[\begin{equation*}
 c_1(\boldsymbol{x}) = \sum_{i=1}^{20} x_i \leq 0,
 \qquad
-c_2(\boldsymbol{x}) = |\boldsymbol{x}|_2 - 5 \leq 0,
-\end{equation*}
-the first is a hyperplane constraint, and the second defines a sphere centered at the origin with radius $5$.</p></li>
-</ul>
+c_2(\boldsymbol{x}) = \|\boldsymbol{x}\|_2 - 5 \leq 0,
+\end{equation*}\]</div>
+<p>the first is a hyperplane constraint, and the second defines a sphere centered at the origin with radius <span class="math notranslate nohighlight">\(5\)</span>.</p>
 <section id="imports">
 <h2>Imports<a class="headerlink" href="#imports" title="Permalink to this heading"></a></h2>
 <div class="cell docutils container">

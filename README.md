@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-This repository contains an implementation of **MF-SCBO**, an adaptation of the SCBO algorithm for **multi-fidelity constrained Bayesian optimization**.
+This repository contains an implementation of **MF-SCBO**, an adaptation of the SCBO algorithm for **multi-fidelity constrained Bayesian optimization** (see [article](https://arxiv.org/abs/2609.29941)).
 
 The original SCBO algorithm ([Eriksson et al., 2021](https://proceedings.mlr.press/v130/eriksson21a/eriksson21a.pdf)) solves **high-dimensional constrained Bayesian optimization problems** using a **trust region approach**.  
 Here, we extend SCBO using [BoTorch](https://botorch.org/) in Python to handle **multi-fidelity problems** efficiently. **Documentation** avaible [here](https://luplz.github.io/MF-SCBO/).
